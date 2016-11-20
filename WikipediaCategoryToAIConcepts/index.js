@@ -1,6 +1,8 @@
 // https://github.com/request/request-promise
 const request = require('request-promise')  
 
+var context;
+
 // https://www.mediawiki.org/wiki/API:Categorymembers
 var getPageidsByCategoryTitleUrl = 'https://en.wikipedia.org/w/api.php?action=query&format=json&list=categorymembers&cmlimit=500&cmtype=page&cmprop=ids&cmtitle=';
 var getSubCategoryByCategoryTitleUrl = 'https://en.wikipedia.org/w/api.php?action=query&format=json&list=categorymembers&cmtype=subcat&cmtitle='
@@ -17,8 +19,8 @@ var options = {
 };
 
 // TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0. Make sure not to insert duplicates into document db though.
-module.exports = function (context, req) {
-
+module.exports = function (cntxt, req) {
+    context = cntxt;
     context.log('WikipediaCategoryToAIConcepts JavaScript HTTP trigger function processed a request.');
 
     if (req.query.category || (req.body && req.body.category)) {
