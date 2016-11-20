@@ -62,6 +62,7 @@ function GetPagesByCategoryTitle(category){
         })
         .catch(function(err){
             context.log('[GetPageidsByCategoryTitle] rejected ' + url);
+            context.done(null, res);
         });
 }
 
@@ -94,6 +95,8 @@ function GetPagesByPageids(pageids){
     var remainingPageidsCount = pageids.length;
 
     for(;lowerBound <= lowerBoundLimit; lowerBound + increment){
+        context.log('[GetPagesByPageids] remainingPageidsCount ' + remainingPageidsCount);
+
         if(upperBound > pageids.length) upperBound = remainingPageidsCount;
         var pageidsStr = pageids.slice(lowerBound, upperBound).join("|");
         var url = getPagesByPageidsUrl.concat(pageidsStr);
@@ -105,20 +108,22 @@ function GetPagesByPageids(pageids){
             .then(function(response){
                 context.log('[GetPagesByPageids] resolved ' + url);
 
-                response.query.pageids.forEach(function(element) {
-                    postOptions.body.source.pageid = response.query.pages[element].pageid;
-                    postOptions.body.title = response.query.pages[element].title;
-                    postOptions.body.extract = response.query.pages[element].extract;
-                    request(postOptions)
-                        .then(function (parsedBody) {
-                            context.log('[GetPagesByPageids] resolved ' + postOptions.uri);
-                            context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
-                        })
-                        .catch(function (err) {
-                            context.log('[GetPagesByPageids] rejected ' + postOptions.uri);
-                            context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
-                        });
-                });
+                if(response.query.pageids){
+                    response.query.pageids.forEach(function(element) {
+                        postOptions.body.source.pageid = response.query.pages[element].pageid;
+                        postOptions.body.title = response.query.pages[element].title;
+                        postOptions.body.extract = response.query.pages[element].extract;
+                        request(postOptions)
+                            .then(function (parsedBody) {
+                                context.log('[GetPagesByPageids] resolved ' + postOptions.uri);
+                                context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
+                            })
+                            .catch(function (err) {
+                                context.log('[GetPagesByPageids] rejected ' + postOptions.uri);
+                                context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
+                            });
+                    });
+                }
                 // TODO: Use promises and move this to main function.
                 res = {
                     body: "WikipediaCategoryToAIConcepts complete"
@@ -127,6 +132,7 @@ function GetPagesByPageids(pageids){
             })
             .catch(function(err){
                 context.log('[GetPagesByPageids] rejected ' + url);
+                context.done(null, res);
             });    
     }
 }
