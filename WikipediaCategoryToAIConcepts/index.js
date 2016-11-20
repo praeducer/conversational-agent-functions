@@ -4,7 +4,7 @@ const fs = require('fs');
 
 var context;
 var appRoot = process.cwd();
-var packageJSON = JSON.parse(fs.readFileSync(appRoot + '\package.json', 'utf8'));
+var packageJSON = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'));
 
 // https://www.mediawiki.org/wiki/API:Categorymembers
 var getPageidsByCategoryTitleUrl = 'https://en.wikipedia.org/w/api.php?action=query&format=json&list=categorymembers&cmlimit=500&cmtype=page&cmprop=ids&cmtitle=';
