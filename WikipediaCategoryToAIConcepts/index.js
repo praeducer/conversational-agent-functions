@@ -118,12 +118,13 @@ function GetPagesByPageids(pageids){
                             .then(function (parsedBody) {
                                 context.log('[GetPagesByPageids] resolved ' + postOptions.uri);
                                 context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
-                                    // TODO: Use promises and move this to main function.
-                                    // TODO: Wait until all insert requests succeed before marking this as done.
-                                    res = {
-                                        body: "WikipediaCategoryToAIConcepts complete"
-                                    };
-                                    context.done(null, res);
+                                // TODO: Use promises and move this to main function.
+                                // TODO: Wait until all insert requests succeed before marking this as done.
+                                res = {
+                                    body: "WikipediaCategoryToAIConcepts complete"
+                                };
+                                context.done(null, res);
+                                // TODO: stop execution of script at all done's while testing.
                             })
                             .catch(function (err) {
                                 context.log('[GetPagesByPageids] rejected ' + postOptions.uri);
