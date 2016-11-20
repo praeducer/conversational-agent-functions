@@ -1,6 +1,7 @@
 // https://github.com/request/request-promise
 const request = require('request-promise')  
 const fs = require('fs');
+const path = require('path');
 
 var context;
 var appRoot = process.cwd();
