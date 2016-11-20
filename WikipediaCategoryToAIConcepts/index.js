@@ -1,7 +1,9 @@
 // https://github.com/request/request-promise
 const request = require('request-promise')  
+const fs = require('fs');
 
 var context;
+var packageJSON = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
 // https://www.mediawiki.org/wiki/API:Categorymembers
 var getPageidsByCategoryTitleUrl = 'https://en.wikipedia.org/w/api.php?action=query&format=json&list=categorymembers&cmlimit=500&cmtype=page&cmprop=ids&cmtitle=';
@@ -61,29 +63,68 @@ function GetPagesByCategoryTitle(category){
         });
 }
 
-// TODO: Batch into sets of 20 as that is the limit
+// TODO: Turn into it's own azure function
+// TODO: Use wikipedia's API continue functionality instead of custom batching system
 // TODO: Return a list of documents that then can be iterated over and inserted into document DB
+// TODO: Only updated if a revision was made since the last time the script was ran: https://www.mediawiki.org/wiki/API:Revisions
 function GetPagesByPageids(pageids){
     context.log('[GetPagesByPageids] start');
 
-    var pageidsStr = pageids.join("|");
-    var url = getPagesByPageidsUrl.concat(pageidsStr);
-    options.url = url;
+    var postOptions = {
+        method: 'POST',
+        // TODO: Store in an environment variable e.g. process.env[code];
+        uri: 'https://conversational-agent-functions.azurewebsites.net/api/InsertAIConcept?code=XERJ0r6B3fgO2KjhagBIisPi/f6kRlrhRHujcyGkaCybNtFL4Rzjig==',
+        body: {
+            source: {
+                name: 'wikipedia',
+                accessedDate: Date.now(),
+                scriptVersion: packageJSON.version
+            },
+            active: true
+        },
+        json: true // Automatically stringifies the body to JSON
+    };
+    // Process in batches of 20
+    var increment = 20;
+    var lowerBound = 0;
+    var upperBound = increment;
+    var lowerBoundLimit = Math.floor(pageids.length / increment) * increment;
+    var remainingPageidsCount = pageids.length;
 
-    request(options)
-        .then(function(response){
-            context.log('[GetPagesByPageids] resolved ' + url);
-            response.query.pageids.forEach(function(element) {
-                //context.log(response.query.pages[element].title);
-                context.log(response.query.pages[element]);
-            });
-            // TODO: Use promises and move this to main function.
-            res = {
-                body: "WikipediaCategoryToAIConcepts pageids " + JSON.stringify(response.query.pageids)
-            };
-            context.done(null, res);
-        })
-        .catch(function(err){
-            context.log('[GetPagesByPageids] rejected ' + url);
-        });
+    for(;lowerBound <= lowerBoundLimit; lowerBound + increment){
+        if(upperBound > pageids.length) upperBound = remainingPageidsCount;
+        var pageidsStr = pageids.slice(lowerBound, upperBound).join("|");
+        var url = getPagesByPageidsUrl.concat(pageidsStr);
+        options.url = url;
+        upperBound = upperBound + increment;
+        remainingPageidsCount = remainingPageidsCount - increment;
+
+        request(options)
+            .then(function(response){
+                context.log('[GetPagesByPageids] resolved ' + url);
+
+                response.query.pageids.forEach(function(element) {
+                    postOptions.body.source.pageid = response.query.pages[element].pageid;
+                    postOptions.body.title = response.query.pages[element].title;
+                    postOptions.body.extract = response.query.pages[element].extract;
+                    request(postOptions)
+                        .then(function (parsedBody) {
+                            context.log('[GetPagesByPageids] resolved ' + postOptions.uri);
+                            context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
+                        })
+                        .catch(function (err) {
+                            context.log('[GetPagesByPageids] rejected ' + postOptions.uri);
+                            context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
+                        });
+                });
+                // TODO: Use promises and move this to main function.
+                res = {
+                    body: "WikipediaCategoryToAIConcepts complete"
+                };
+                context.done(null, res);
+            })
+            .catch(function(err){
+                context.log('[GetPagesByPageids] rejected ' + url);
+            });    
+    }
 }
