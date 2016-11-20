@@ -17,7 +17,7 @@ var options = {
     url: "",
     method: 'GET',
     headers: {
-        'User-Agent': 'Futurisma - A conversational agent that teaches AI by paulprae.com'
+        'User-Agent': '[testing] Futurisma - A conversational agent that teaches AI by paulprae.com'
     },
     json: true
 };
@@ -92,19 +92,18 @@ function GetPagesByPageids(pageids){
     var increment = 20;
     var lowerBound = 0;
     var upperBound = increment;
-    var lowerBoundLimit = Math.floor(pageids.length / increment) * increment;
     var remainingPageidsCount = pageids.length;
 
-    for(;lowerBound <= lowerBoundLimit || remainingPageidsCount < 1;){
+    for(;remainingPageidsCount > 0;){
         context.log('[GetPagesByPageids] remainingPageidsCount ' + remainingPageidsCount);
 
         if(upperBound > pageids.length) upperBound = remainingPageidsCount;
         var pageidsStr = pageids.slice(lowerBound, upperBound).join("|");
         var url = getPagesByPageidsUrl.concat(pageidsStr);
         options.url = url;
-        upperBound = upperBound + increment;
-        lowerBound = lowerBound + increment;
         remainingPageidsCount = remainingPageidsCount - increment;
+        lowerBound = lowerBound + increment;
+        upperBound = upperBound + increment;
 
         request(options)
             .then(function(response){
