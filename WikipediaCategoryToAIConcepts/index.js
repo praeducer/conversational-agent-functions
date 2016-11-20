@@ -95,7 +95,7 @@ function GetPagesByPageids(pageids){
     var lowerBoundLimit = Math.floor(pageids.length / increment) * increment;
     var remainingPageidsCount = pageids.length;
 
-    for(;lowerBound <= lowerBoundLimit; lowerBound + increment){
+    for(;lowerBound <= lowerBoundLimit || remainingPageidsCount < 1;){
         context.log('[GetPagesByPageids] remainingPageidsCount ' + remainingPageidsCount);
 
         if(upperBound > pageids.length) upperBound = remainingPageidsCount;
@@ -103,6 +103,7 @@ function GetPagesByPageids(pageids){
         var url = getPagesByPageidsUrl.concat(pageidsStr);
         options.url = url;
         upperBound = upperBound + increment;
+        lowerBound = lowerBound + increment;
         remainingPageidsCount = remainingPageidsCount - increment;
 
         request(options)
