@@ -16,14 +16,14 @@ var options = {
     json: true
 };
 
-
+// TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0. Make sure not to insert duplicates into document db though.
 module.exports = function (context, req) {
 
     context.log('WikipediaCategoryToAIConcepts JavaScript HTTP trigger function processed a request.');
 
     if (req.query.category || (req.body && req.body.category)) {
         // TODO: Use a promise here and then say context is done once promise resolves.
-       GetPagesByCategoryTitle('Category:' + category);
+       GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category));
     }
     else {
         res = {
