@@ -1,0 +1,25 @@
+{
+  "bindings": [
+    {
+      "authLevel": "function",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req"
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "$return"
+    },
+    {
+      "type": "documentDB",
+      "name": "AIConceptDocument",
+      "databaseName": "futurisma",
+      "collectionName": "AIConcept",
+      "createIfNotExists": false,
+      "connection": "futurisma_DOCUMENTDB",
+      "direction": "out"
+    }
+  ],
+  "disabled": false
+}
