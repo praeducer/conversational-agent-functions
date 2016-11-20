@@ -62,6 +62,7 @@ function GetPagesByCategoryTitle(category){
         })
         .catch(function(err){
             context.log('[GetPageidsByCategoryTitle] rejected ' + url);
+            context.log(err);
             context.done(null, res);
         });
 }
@@ -121,6 +122,7 @@ function GetPagesByPageids(pageids){
                             .catch(function (err) {
                                 context.log('[GetPagesByPageids] rejected ' + postOptions.uri);
                                 context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
+                                context.log(err);
                             });
                     });
                 }
@@ -132,6 +134,7 @@ function GetPagesByPageids(pageids){
             })
             .catch(function(err){
                 context.log('[GetPagesByPageids] rejected ' + url);
+                context.log(err);
                 context.done(null, res);
             });    
     }
