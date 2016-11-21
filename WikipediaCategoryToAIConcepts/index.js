@@ -1,5 +1,6 @@
 // For testing
 var test = true;
+// TODO: Remove all dones that would stop the script earlier because of all the async stuff
 
 // https://github.com/request/request-promise
 const request = require('request-promise')  
@@ -108,9 +109,9 @@ function GetPagesByPageids(pageids){
     while(remainingPageidsCount > 0){
         context.log('[GetPagesByPageids] remainingPageidsCount ' + remainingPageidsCount);
 
-        if(upperBound > pageids.length) upperBound = remainingPageidsCount;
+        if(upperBound > pageids.length) upperBound = remainingPageidsCount + lowerBound;
         var pageidsStr = pageids.slice(lowerBound, upperBound).join("|");
-        var url = getPagesByPageidsUrl.concat(pageidsStr);
+        var url = getPagesByPageidsUrl + encodeURIComponent(pageidsStr);
         options.url = url;
 
         if(test){
@@ -129,34 +130,48 @@ function GetPagesByPageids(pageids){
 
                 if(response.query.pageids){
                     response.query.pageids.forEach(function(element) {
-                        postOptions.body.source.pageid = response.query.pages[element].pageid;
-                        postOptions.body.title = response.query.pages[element].title;
-                        postOptions.body.extract = response.query.pages[element].extract;
-                        request(postOptions)
-                            .then(function (parsedBody) {
-                                context.log('[GetPagesByPageids] resolved ' + postOptions.uri);
-                                context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
-                                // TODO: Use promises and move this to main function.
-                                // TODO: Wait until all insert requests succeed before marking this as done.
-                                res = {
-                                    body: "WikipediaCategoryToAIConcepts complete"
-                                };
-                                context.done(null, res);
-                                // stop execution of script at all done's while testing.
-                                if(test){
-                                    process.exit();
+                        if(response.query.pages[element].pageid
+                            && response.query.pages[element].title
+                            && response.query.pages[element].extract){
+                                postOptions.body.source.pageid = response.query.pages[element].pageid;
+                                postOptions.body.title = response.query.pages[element].title;
+                                postOptions.body.extract = response.query.pages[element].extract;
+                                try{
+                                    request(postOptions)
+                                        .then(function (parsedBody) {
+                                            context.log('[GetPagesByPageids] resolved ' + postOptions.uri);
+                                            context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
+                                            // TODO: Use promises and move this to main function.
+                                            // TODO: Wait until all insert requests succeed before marking this as done.
+                                            res = {
+                                                body: "WikipediaCategoryToAIConcepts complete"
+                                            };
+                                            context.done(null, res);
+                                            // stop execution of script at all done's while testing.
+                                            if(test){
+                                                process.exit();
+                                            }
+                                        })
+                                        .catch(function (err) {
+                                            context.log('[GetPagesByPageids] rejected ' + postOptions.uri);
+                                            context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
+                                            context.log(err);
+                                            context.done(null, res);
+                                            // stop execution of script at all done's while testing.
+                                            if(test){
+                                                process.exit();
+                                            }
+                                        });
+                                } catch (e) {
+                                    context.log(e);
+                                    if(err) context.log(err);
+                                    context.done(null, res);
+                                    // stop execution of script at all done's while testing.
+                                    if(test){
+                                        process.exit();
+                                    }
                                 }
-                            })
-                            .catch(function (err) {
-                                context.log('[GetPagesByPageids] rejected ' + postOptions.uri);
-                                context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
-                                context.log(err);
-                                context.done(null, res);
-                                // stop execution of script at all done's while testing.
-                                if(test){
-                                    process.exit();
-                                }
-                            });
+                        }
                     });
                 }
             })
