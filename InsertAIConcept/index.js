@@ -8,8 +8,8 @@ var config = require(path.resolve(__dirname, 'config'));
 var context;
 var client = new documentClient(config.endpoint, { 'masterKey': config.primaryKey });
 var HttpStatusCodes = { NOTFOUND: 404 };
-var databaseUrl = 'dbs/${config.database.id}';
-var collectionUrl = '${databaseUrl}/colls/${config.collection.id}';
+var databaseUrl = 'dbs/' + config.database.id;
+var collectionUrl = databaseUrl + '/colls/' + config.collection.id;
 
 // TODO: Handle batches of documents
 // TODO: Only updated if a revision was made since the last time the script was ran: https://www.mediawiki.org/wiki/API:Revisions
@@ -48,6 +48,7 @@ module.exports = function (cntxt, req) {
             });
     }
     else {
+        context.log('[InsertAIConcept] missing body');
         context.res = {
             status: 400,
             body: 'Missing source.pageid or title or extract in the request body'
@@ -63,7 +64,7 @@ function QueryCollection(pageid) {
     return new Promise((resolve, reject) => {
         client.queryDocuments(
             collectionUrl,
-            'SELECT * FROM AIConcept AIC WHERE AIC.source.pageid = '+ pageid
+            'SELECT * FROM AIConcept AIC WHERE AIC.active = true AND AIC.source.pageid ='+ pageid
         ).toArray((err, results) => {
             if (err) reject(err);
             else resolve(results);
