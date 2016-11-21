@@ -23,7 +23,7 @@ module.exports = function (cntxt, req) {
                 // If there is not an entry already         
                 if(results && results.length == 0){
                     context.log("[InsertAIConcept] inserting " + req.body);
-                    res = {
+                    context.res = {
                         // status: 200, /* Defaults to 200 */
                         body: "[InsertAIConcept] inserting " + req.body
                     };
@@ -31,33 +31,33 @@ module.exports = function (cntxt, req) {
                 }
                 else
                 {
-                    context.log("[InsertAIConcept] duplicate " + req.body);
-                    res = {
+                    context.log("[InsertAIConcept] duplicate " + JSON.stringify(req.body));
+                    context.res = {
                         // TODO: A duplicate is ok but we should let the client know through a more useful status code
                         status: 200,
                         body: "[InsertAIConcept] duplicate " + req.body
                     };
                 }
-                context.done(null, res);
+                context.done(null, context.res);
             })
             .catch(function(err){
-                context.log('[InsertAIConcept] rejected ' + req.body);
+                context.log('[InsertAIConcept] rejected ' + JSON.stringify(req.body));
                 context.log(err);
-                context.done(null, res);
+                context.done(null, context.res);
             });
     }
     else {
-        res = {
+        context.res = {
             status: 400,
             body: "Missing source.pageid or title or extract in the request body"
         };
-        context.done(null, res);
+        context.done(null, context.res);
     }
 };
 
 // https://docs.microsoft.com/en-us/azure/documentdb/documentdb-nodejs-get-started
 function QueryCollection(pageid) {
-    context.log('[QueryCollection] pageid ' + pageid + ' index ${config.collection.id}');
+    context.log('[QueryCollection] pageid ' + pageid + ' index ' + config.collection.id);
 
     return new Promise((resolve, reject) => {
         client.queryDocuments(
