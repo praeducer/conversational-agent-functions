@@ -1,5 +1,5 @@
 // For testing
-var test = true;
+var test = false;
 
 // https://github.com/request/request-promise
 const request = require('request-promise')  
