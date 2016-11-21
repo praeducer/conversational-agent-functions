@@ -1,3 +1,6 @@
+// For testing
+var test = true;
+
 // https://github.com/request/request-promise
 const request = require('request-promise')  
 const fs = require('fs');
@@ -37,6 +40,10 @@ module.exports = function (cntxt, req) {
             body: "Please pass a category on the query string or in the request body"
         };
         context.done(null, res);
+        // stop execution of script at all done's while testing.
+        if(test){
+            process.exit();
+        }
     }
 };
 
@@ -64,6 +71,10 @@ function GetPagesByCategoryTitle(category){
             context.log('[GetPageidsByCategoryTitle] rejected ' + url);
             context.log(err);
             context.done(null, res);
+            // stop execution of script at all done's while testing.
+            if(test){
+                process.exit();
+            }
         });
 }
 
@@ -94,13 +105,20 @@ function GetPagesByPageids(pageids){
     var upperBound = increment;
     var remainingPageidsCount = pageids.length;
 
-    for(;remainingPageidsCount > 0;){
+    while(remainingPageidsCount > 0){
         context.log('[GetPagesByPageids] remainingPageidsCount ' + remainingPageidsCount);
 
         if(upperBound > pageids.length) upperBound = remainingPageidsCount;
         var pageidsStr = pageids.slice(lowerBound, upperBound).join("|");
         var url = getPagesByPageidsUrl.concat(pageidsStr);
         options.url = url;
+
+        if(test){
+            context.log('[GetPagesByPageids] lowerBound ' + lowerBound);
+            context.log('[GetPagesByPageids] upperBound ' + upperBound);
+            context.log('[GetPagesByPageids] pageidsStr ' + pageidsStr);
+        }
+
         remainingPageidsCount = remainingPageidsCount - increment;
         lowerBound = lowerBound + increment;
         upperBound = upperBound + increment;
@@ -124,13 +142,20 @@ function GetPagesByPageids(pageids){
                                     body: "WikipediaCategoryToAIConcepts complete"
                                 };
                                 context.done(null, res);
-                                // TODO: stop execution of script at all done's while testing.
+                                // stop execution of script at all done's while testing.
+                                if(test){
+                                    process.exit();
+                                }
                             })
                             .catch(function (err) {
                                 context.log('[GetPagesByPageids] rejected ' + postOptions.uri);
                                 context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
                                 context.log(err);
                                 context.done(null, res);
+                                // stop execution of script at all done's while testing.
+                                if(test){
+                                    process.exit();
+                                }
                             });
                     });
                 }
@@ -139,6 +164,10 @@ function GetPagesByPageids(pageids){
                 context.log('[GetPagesByPageids] rejected ' + url);
                 context.log(err);
                 context.done(null, res);
+                // stop execution of script at all done's while testing.
+                if(test){
+                    process.exit();
+                }
             });    
     }
 }
