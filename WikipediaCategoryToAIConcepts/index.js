@@ -1,6 +1,5 @@
 // For testing
 var test = true;
-// TODO: Remove all dones that would stop the script earlier because of all the async stuff
 
 // https://github.com/request/request-promise
 const request = require('request-promise')  
@@ -29,11 +28,17 @@ var options = {
 // TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0. Make sure not to insert duplicates into document db though.
 module.exports = function (cntxt, req) {
     context = cntxt;
-    context.log('WikipediaCategoryToAIConcepts JavaScript HTTP trigger function processed a request.');
+    context.log('[WikipediaCategoryToAIConcepts] JavaScript HTTP trigger function processed a request.');
 
     if (req.query.category || (req.body && req.body.category)) {
         // TODO: Use a promise here and then say context is done once promise resolves.
        GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category));
+  
+        // TODO: Wait until all insert requests succeed before marking this as done.
+        res = {
+            body: "WikipediaCategoryToAIConcepts complete"
+        };
+        context.done(null, res);
     }
     else {
         res = {
@@ -72,17 +77,15 @@ function GetPagesByCategoryTitle(category){
             context.log('[GetPageidsByCategoryTitle] rejected ' + url);
             context.log(err);
             context.done(null, res);
-            // stop execution of script at all done's while testing.
+            // stop execution of script while testing.
             if(test){
                 process.exit();
             }
         });
 }
 
-// TODO: Turn into it's own azure function
-// TODO: Use wikipedia's API continue functionality instead of custom batching system
-// TODO: Return a list of documents that then can be iterated over and inserted into document DB
-// TODO: Only updated if a revision was made since the last time the script was ran: https://www.mediawiki.org/wiki/API:Revisions
+// TODO: Turn into it's own azure function. Return a list of documents that then can be iterated over and inserted into document DB
+// TODO: Use wikipedia API's' continue functionality instead of custom batching system
 function GetPagesByPageids(pageids){
     context.log('[GetPagesByPageids] start');
 
@@ -141,13 +144,7 @@ function GetPagesByPageids(pageids){
                                         .then(function (parsedBody) {
                                             context.log('[GetPagesByPageids] resolved ' + postOptions.uri);
                                             context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
-                                            // TODO: Use promises and move this to main function.
-                                            // TODO: Wait until all insert requests succeed before marking this as done.
-                                            res = {
-                                                body: "WikipediaCategoryToAIConcepts complete"
-                                            };
-                                            context.done(null, res);
-                                            // stop execution of script at all done's while testing.
+                                            // stop execution of script while testing.
                                             if(test){
                                                 process.exit();
                                             }
@@ -156,18 +153,18 @@ function GetPagesByPageids(pageids){
                                             context.log('[GetPagesByPageids] rejected ' + postOptions.uri);
                                             context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
                                             context.log(err);
-                                            context.done(null, res);
-                                            // stop execution of script at all done's while testing.
-                                            if(test){
+                                            // stop execution of script while testing.
+                                            if(test){                                          
+                                                context.done(null, res);    
                                                 process.exit();
                                             }
                                         });
                                 } catch (e) {
                                     context.log(e);
                                     if(err) context.log(err);
-                                    context.done(null, res);
-                                    // stop execution of script at all done's while testing.
-                                    if(test){
+                                    // stop execution of script while testing.
+                                    if(test){                                        
+                                        context.done(null, res);
                                         process.exit();
                                     }
                                 }
@@ -178,9 +175,9 @@ function GetPagesByPageids(pageids){
             .catch(function(err){
                 context.log('[GetPagesByPageids] rejected ' + url);
                 context.log(err);
-                context.done(null, res);
                 // stop execution of script at all done's while testing.
                 if(test){
+                    context.done(null, res);
                     process.exit();
                 }
             });    

@@ -1,0 +1,29 @@
+{
+  "name": "insert-ai-concept",
+  "version": "0.0.1",
+  "description": "Given Wikipedia page data, store it as a concept in a KB",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "url": "*",
+    "documentdb": "^1.10.0",
+    "path": "*"
+  },
+  "engines": {
+    "node": "5.9.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/praeducer/conversational-agent-functions"
+  },
+  "keywords": [
+    "chat",
+    "bot",
+    "conversational"
+  ],
+  "author": "Paul Prae",
+  "contributors": [],
+  "license": ""
+}
