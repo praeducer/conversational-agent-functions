@@ -62,7 +62,7 @@ function QueryCollection(pageid) {
     return new Promise((resolve, reject) => {
         client.queryDocuments(
             collectionUrl,
-            'SELECT VALUE r.children FROM root r WHERE r.source.pageid = "'+ pageid + '"'
+            'SELECT * FROM AIConcept AIC WHERE AIC.source.pageid = '+ pageid
         ).toArray((err, results) => {
             if (err) reject(err)
             else {
