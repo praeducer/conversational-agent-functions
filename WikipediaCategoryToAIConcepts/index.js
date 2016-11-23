@@ -16,28 +16,8 @@ var getSubCategoryByCategoryTitleUrl = 'https://en.wikipedia.org/w/api.php?actio
 // https://www.mediawiki.org/wiki/Extension:TextExtracts
 // TODO: Remove exintro= to get full text. May help with search.
 var getPagesByPageidsUrl = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&indexpageids=&pageids=';
-var getOptions = {
-    url: "",
-    method: 'GET',
-    headers: {
-        'User-Agent': '[testing] Futurisma - A conversational agent that teaches AI by paulprae.com'
-    },
-    json: true
-};
-var postOptions = {
-    method: 'POST',
-    // TODO: Store in an environment variable e.g. process.env[code];
-    uri: 'https://conversational-agent-functions.azurewebsites.net/api/InsertAIConcept?code=XERJ0r6B3fgO2KjhagBIisPi/f6kRlrhRHujcyGkaCybNtFL4Rzjig==',
-    body: {
-        source: {
-            name: 'wikipedia',
-            accessedDate: Date.now(),
-            scriptVersion: packageJSON.version
-        },
-        active: true
-    },
-    json: true // Automatically stringifies the body to JSON
-};
+var insertAIConceptUri = 'https://conversational-agent-functions.azurewebsites.net/api/InsertAIConcept?code=XERJ0r6B3fgO2KjhagBIisPi/f6kRlrhRHujcyGkaCybNtFL4Rzjig==';
+var userAgent = '[testing] Futurisma - A conversational agent that teaches AI by paulprae.com';
 
 // TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0. Make sure not to insert duplicates into document db though.
 // Promises: https://developers.google.com/web/fundamentals/getting-started/primers/promises
@@ -47,17 +27,21 @@ module.exports = function (cntxt, req) {
 
     if (req.query.category || (req.body && req.body.category)) {       
         context.log('[WikipediaCategoryToAIConcepts] category ' + req.body.category);
+
         GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category))
             .then(function(pageids){
-                GetPagesByPageids(pageids)
-                    .then(function(results){
-                        context.log('[WikipediaCategoryToAIConcepts] complete');
+                var urls = CreatePageidsUrls(pageids);
+                var wikiPageObjects = WikiPagesToObjectsByManyUrls(urls);
+                Promise.all(
+                        wikiPageObjects.map(InsertAIConcept)
+                    ).then(function(results){
+                        context.log('[WikipediaCategoryToAIConcepts] success');
                         res = {
-                            body: "WikipediaCategoryToAIConcepts complete"
+                            body: "WikipediaCategoryToAIConcepts success"
                         };
                         context.done(null, res);
                     }).catch(function(err){
-                        context.log('[GetPageidsByCategoryTitle] err');    
+                        context.log('[WikipediaCategoryToAIConcepts] failure');    
                         context.log(err);
                         res = {
                             status: 400,
@@ -67,15 +51,20 @@ module.exports = function (cntxt, req) {
                     });
             })
             .catch(function(err){
-                context.log('[GetPageidsByCategoryTitle] err');   
-                context.log(err);             
+                context.log('[WikipediaCategoryToAIConcepts] failure');   
+                context.log(err);
+                res = {
+                    status: 400,
+                    body: err
+                };            
                 context.done(null, res);
             });
     }
     else {
+        context.log('[WikipediaCategoryToAIConcepts] failure. Please pass a category on the query string or in the request body.');  
         res = {
             status: 400,
-            body: "Please pass a category on the query string or in the request body"
+            body: "[WikipediaCategoryToAIConcepts] failure. Please pass a category on the query string or in the request body."
         };
         context.done(null, res);
     }
@@ -86,11 +75,17 @@ module.exports = function (cntxt, req) {
 // Takes in the string of the category title e.g. "Category:Computer vision"
 function GetPagesByCategoryTitle(category){
     context.log('[GetPageidsByCategoryTitle] start async');
-    return new Promise(function(resolve, reject) {
 
+    return new Promise(function(resolve, reject) {
         var pageids = [];
-        var url = getPageidsByCategoryTitleUrl.concat(encodeURIComponent(category));
-        getOptions.url = url;
+        var getOptions = {
+            url: getPageidsByCategoryTitleUrl.concat(encodeURIComponent(category)),
+            method: 'GET',
+            headers: {
+                'User-Agent': userAgent
+            },
+            json: true
+        };
 
         // https://blog.risingstack.com/node-hero-node-js-request-module-tutorial/
         request(getOptions)
@@ -103,21 +98,15 @@ function GetPagesByCategoryTitle(category){
             })
             .catch(function(err){
                 context.log('[GetPageidsByCategoryTitle] rejected ' + url);
+                context.log(err);
+                // stop execution of script at all done's while testing.
+                if(test){
+                    context.done(null, res);
+                    process.exit();
+                }
                 reject(err);
             });
     });
-}
-
-// TODO: Turn into it's own azure function. Return a list of documents that then can be iterated over and inserted into document DB
-// TODO: Use wikipedia API's' continue functionality instead of custom batching system
-function GetPagesByPageids(pageids){
-    context.log('[GetPagesByPageids] start async');
-
-    var urls = CreatePageidsUrls(pageids);
-    // This will return an array of all the results from GetPagesByUrl
-    return Promise.all(
-        urls.map(GetPagesByUrl)
-    ); 
 }
 
 function CreatePageidsUrls(pageids){
@@ -152,52 +141,78 @@ function CreatePageidsUrls(pageids){
     return urls;
 }
 
-function GetPagesByUrl(url){
-    context.log('[GetPagesByUrl] start async');
+// TODO: Turn into it's own azure function. Return a list of documents that then can be iterated over and inserted into document DB
+// TODO: Use wikipedia API's' continue functionality instead of custom batching system
+function WikiPagesToObjectsByManyUrls(urls){
+    context.log('[WikiPagesToObjectsByManyUrls] start async');
+
+    var wikiPageObjects = [];  
+    // This will return an array of all the results
+    Promise.all(
+        urls.map(WikiPagesToObjectsByUrl)
+    ).then(function(arrayOfResults){       
+        context.log('[WikiPagesToObjectsByManyUrls] Promise.all success');
+        // Turn into a single dimensional array
+        arrayOfResults.forEach(function(results){
+            wikiPageObjects = wikiPageObjects.concat(results);
+        });
+        return wikiPageObjects;
+    })
+    .catch(function(err){
+        context.log('[WikiPagesToObjectsByManyUrls] Promise.all failure');
+        context.log(err);
+        // stop execution of script at all done's while testing.
+        if(test){
+            context.done(null, res);
+            process.exit();
+        }
+        // failure
+        // TODO: Fail silently. Don't want one issue to stop all inserts
+        return wikiPageObjects;
+    });
+}
+
+function WikiPagesToObjectsByUrl(url){
+    context.log('[WikiPagesToObjectsByUrl] start async');
 
     return new Promise(function(resolve, reject) {
-        getOptions.url = url;
-        // TODO: Make sure responses look like what we think they look like. Print them.
+        var wikiPageObjects = [];
+        var getOptions = {
+            url: url,
+            method: 'GET',
+            headers: {
+                'User-Agent': userAgent
+            },
+            json: true
+        };
+
         request(getOptions)
             .then(function(response){
-                context.log('[GetPagesByUrl] resolved ' + url);
+                context.log('[WikiPagesToObjectsByUrl] resolved ' + url);
+                if(test){
+                    context.log('[WikiPagesToObjectsByUrl] response');
+                    context.log(response);
+                }
 
-                var insertAIConceptPromises = [];
                 if(response.query.pageids){
                     response.query.pageids.forEach(function(element) {
                         if(response.query.pages[element].pageid
                             && response.query.pages[element].title
                             && response.query.pages[element].extract){
-
-                                insertAIConceptPromises.push(
-                                    InsertAIConcept(
-                                        response.query.pages[element].pageid,
-                                        response.query.pages[element].title,
-                                        response.query.pages[element].extract
-                                    )
+                                wikiPageObjects.push(
+                                    {
+                                        pageid: response.query.pages[element].pageid,
+                                        title: response.query.pages[element].title,
+                                        extract: response.query.pages[element].extract
+                                    }
                                 );
                         }
                     });
                 }
-                // success, return array of results from all promises
-                Promise.all(insertAIConceptPromises)
-                    .then(function(results){
-                        context.log('[GetPagesByUrl] promises resolved');
-                        resolve(results);
-                    })
-                    .catch(function(err){
-                        context.log('[GetPagesByUrl] promises rejected');
-                        // stop execution of script at all done's while testing.
-                        if(test){
-                            context.done(null, res);
-                            process.exit();
-                        }
-                        // TODO: what happens when one of the promises fails but the rest succeed? we don't want the whole thing to get rejected because of one failure.
-                        reject(err);
-                    });
+                resolve(wikiPageObjects);
             })
             .catch(function(err){
-                context.log('[GetPagesByUrl] rejected ' + url);
+                context.log('[WikiPagesToObjectsByUrl] rejected ' + url);
                 context.log(err);
                 // stop execution of script at all done's while testing.
                 if(test){
@@ -205,25 +220,41 @@ function GetPagesByUrl(url){
                     process.exit();
                 }
                 // failure
+                // TODO: Fail silently. Don't want one issue to stop all inserts
                 reject(err);
             }); 
     }); 
 }
 
-function InsertAIConcept(pageid, title, extract){
+function InsertAIConcept(wikiPageObject){
     context.log('[InsertAIConcept] start async');
 
     return new Promise(function(resolve, reject) {
-        postOptions.body.source.pageid = pageid;
-        postOptions.body.title = title;
-        postOptions.body.extract = extract;
+        var postOptions = {
+            method: 'POST',
+            // TODO: Store in an environment variable e.g. process.env[code];
+            uri: insertAIConceptUri,
+            body: {
+                source: {
+                    pageid: wikiPageObject.pageid,
+                    name: 'wikipedia',
+                    accessedDate: Date.now(),
+                    scriptVersion: packageJSON.version
+                },
+                title: wikiPageObject.title,
+                extract: wikiPageObject.extract,
+                active: true
+            },
+            json: true // Automatically stringifies the body to JSON
+        };
         try{
             request(postOptions)
                 .then(function (parsedBody) {
+                    // TODO: Consider printing everything after its all returned in calling methods tp prevent strange async stuff.
                     context.log('[InsertAIConcept] resolved ' + postOptions.uri);
-                    // TODO: Consider printing everything after its all returned in calling methods.
                     context.log(parsedBody);
                     // stop execution of script while testing.
+                    // TODO: Remove after initial test. Still want to fail on errors after initial test.
                     if(test){                                          
                         context.done(null, res); 
                         process.exit();
@@ -232,9 +263,9 @@ function InsertAIConcept(pageid, title, extract){
                     resolve(parsedBody);
                 })
                 .catch(function (err) {
+                    // TODO: Consider printing everything after its all returned in calling methods tp prevent strange async stuff.
                     context.log('[InsertAIConcept] rejected ' + postOptions.uri);
                     context.log('[InsertAIConcept] pageid ' + pageid);
-                    // TODO: Consider printing everything after its all returned in calling methods.
                     context.log(err);
                     // stop execution of script while testing.
                     if(test){                                          
@@ -245,7 +276,7 @@ function InsertAIConcept(pageid, title, extract){
                     reject(err);
                 });
         } catch (e) {
-            // TODO: Consider printing everything after its all returned in calling methods.
+            // TODO: Consider printing everything after its all returned in calling methods tp prevent strange async stuff.
             context.log('[InsertAIConcept] exception');
             context.log(e);
             if(err) context.log(err);
