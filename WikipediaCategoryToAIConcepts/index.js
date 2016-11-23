@@ -19,14 +19,14 @@ var getPagesByPageidsUrl = 'https://en.wikipedia.org/w/api.php?format=json&actio
 var insertAIConceptUri = 'https://conversational-agent-functions.azurewebsites.net/api/InsertAIConcept?code=XERJ0r6B3fgO2KjhagBIisPi/f6kRlrhRHujcyGkaCybNtFL4Rzjig==';
 var userAgent = '[testing] Futurisma - A conversational agent that teaches AI by paulprae.com';
 
-// TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0. Make sure not to insert duplicates into document db though.
+// TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0.
 // Promises: https://developers.google.com/web/fundamentals/getting-started/primers/promises
 module.exports = function (cntxt, req) {
     context = cntxt;
     context.log('[WikipediaCategoryToAIConcepts] JavaScript HTTP trigger function processed a request.');
 
     if (req.query.category || (req.body && req.body.category)) {       
-        context.log('[WikipediaCategoryToAIConcepts] category ' + req.body.category);
+        context.log('[WikipediaCategoryToAIConcepts] category ' + (req.query.category || req.body.category));
 
         GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category))
             .then(function(pageids){
@@ -148,6 +148,7 @@ function WikiPagesToObjectsByManyUrls(urls){
 
     var wikiPageObjects = [];  
     // This will return an array of all the results
+    // TODO: Is this async? Does the calling method need to expect a promise or does the then make this act sync?
     Promise.all(
         urls.map(WikiPagesToObjectsByUrl)
     ).then(function(arrayOfResults){       
@@ -176,7 +177,6 @@ function WikiPagesToObjectsByUrl(url){
     context.log('[WikiPagesToObjectsByUrl] start async');
 
     return new Promise(function(resolve, reject) {
-        var wikiPageObjects = [];
         var getOptions = {
             url: url,
             method: 'GET',
@@ -193,7 +193,8 @@ function WikiPagesToObjectsByUrl(url){
                     context.log('[WikiPagesToObjectsByUrl] response');
                     context.log(response);
                 }
-
+                
+                var wikiPageObjects = [];
                 if(response.query.pageids){
                     response.query.pageids.forEach(function(element) {
                         if(response.query.pages[element].pageid
@@ -226,6 +227,7 @@ function WikiPagesToObjectsByUrl(url){
     }); 
 }
 
+// TODO: Insert category as well, especially after refactoring so this script is recursive to subcategories
 function InsertAIConcept(wikiPageObject){
     context.log('[InsertAIConcept] start async');
 
@@ -250,7 +252,7 @@ function InsertAIConcept(wikiPageObject){
         try{
             request(postOptions)
                 .then(function (parsedBody) {
-                    // TODO: Consider printing everything after its all returned in calling methods tp prevent strange async stuff.
+                    // TODO: Consider printing everything after its all returned in calling methods to prevent strange async stuff.
                     context.log('[InsertAIConcept] resolved ' + postOptions.uri);
                     context.log(parsedBody);
                     // stop execution of script while testing.
@@ -263,7 +265,7 @@ function InsertAIConcept(wikiPageObject){
                     resolve(parsedBody);
                 })
                 .catch(function (err) {
-                    // TODO: Consider printing everything after its all returned in calling methods tp prevent strange async stuff.
+                    // TODO: Consider printing everything after its all returned in calling methods to prevent strange async stuff.
                     context.log('[InsertAIConcept] rejected ' + postOptions.uri);
                     context.log('[InsertAIConcept] pageid ' + pageid);
                     context.log(err);
@@ -276,7 +278,7 @@ function InsertAIConcept(wikiPageObject){
                     reject(err);
                 });
         } catch (e) {
-            // TODO: Consider printing everything after its all returned in calling methods tp prevent strange async stuff.
+            // TODO: Consider printing everything after its all returned in calling methods to prevent strange async stuff.
             context.log('[InsertAIConcept] exception');
             context.log(e);
             if(err) context.log(err);
