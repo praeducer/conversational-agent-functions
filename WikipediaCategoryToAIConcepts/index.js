@@ -33,7 +33,10 @@ module.exports = function (cntxt, req) {
         GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category))
             .then(function(pageids){
                 if(pageids && pageids.length > 1){
-                    context.log('[WikipediaCategoryToAIConcepts] resolved first promise');
+                    if(test){
+                        context.log('[WikipediaCategoryToAIConcepts] resolved first promise');                   
+                        context.log('[WikipediaCategoryToAIConcepts] processing ' + pageids.length + ' pageids.');
+                    }
                     var urls = CreatePageidsUrls(pageids);
                     var wikiPageObjects = WikiPagesToObjectsByManyUrls(urls);
                     // TODO: Could return and handle in another then
@@ -104,6 +107,7 @@ function GetPagesByCategoryTitle(category){
             };
 
             if(test){
+                context.log('[GetPageidsByCategoryTitle] options');
                 context.log(getOptions);
             }
 
@@ -123,7 +127,6 @@ function GetPagesByCategoryTitle(category){
                     // stop execution of script at all done's while testing.
                     if(test){
                         context.done(null, res);
-                        process.exit();
                     }
                     reject(err);
                 });
@@ -134,11 +137,12 @@ function GetPagesByCategoryTitle(category){
             // stop execution of script while testing.
             if(test){                                        
                 context.done(null, res);
-                process.exit();
             }
             // failure
             reject(e);
         }
+        
+        if(test) context.log('[GetPageidsByCategoryTitle] promise created');
     });
 }
 
@@ -198,7 +202,6 @@ function WikiPagesToObjectsByManyUrls(urls){
         // stop execution of script at all done's while testing.
         if(test){
             context.done(null, res);
-            process.exit();
         }
         // failure
         // TODO: Fail silently. Don't want one issue to stop all inserts
@@ -251,7 +254,6 @@ function WikiPagesToObjectsByUrl(url){
                 // stop execution of script at all done's while testing.
                 if(test){
                     context.done(null, res);
-                    process.exit();
                 }
                 // failure
                 // TODO: Fail silently. Don't want one issue to stop all inserts
@@ -292,7 +294,6 @@ function InsertAIConcept(wikiPageObject){
                     // TODO: Remove after initial test. Still want to fail on errors after initial test.
                     if(test){                                          
                         context.done(null, res); 
-                        process.exit();
                     }
                     // success
                     resolve(parsedBody);
@@ -304,8 +305,7 @@ function InsertAIConcept(wikiPageObject){
                     context.log(err);
                     // stop execution of script while testing.
                     if(test){                                          
-                        context.done(null, res);    
-                        process.exit();
+                        context.done(null, res);
                     }
                     // failure
                     reject(err);
@@ -318,7 +318,6 @@ function InsertAIConcept(wikiPageObject){
             // stop execution of script while testing.
             if(test){                                        
                 context.done(null, res);
-                process.exit();
             }
             // failure
             reject(e);
