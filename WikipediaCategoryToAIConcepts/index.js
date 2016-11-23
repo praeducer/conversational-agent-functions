@@ -1,5 +1,5 @@
 // For testing
-var test = false;
+var test = true;
 
 // https://github.com/request/request-promise
 const request = require('request-promise')  
@@ -16,7 +16,7 @@ var getSubCategoryByCategoryTitleUrl = 'https://en.wikipedia.org/w/api.php?actio
 // https://www.mediawiki.org/wiki/Extension:TextExtracts
 // TODO: Remove exintro= to get full text. May help with search.
 var getPagesByPageidsUrl = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&indexpageids=&pageids=';
-var options = {
+var getOptions = {
     url: "",
     method: 'GET',
     headers: {
@@ -24,21 +24,53 @@ var options = {
     },
     json: true
 };
+var postOptions = {
+    method: 'POST',
+    // TODO: Store in an environment variable e.g. process.env[code];
+    uri: 'https://conversational-agent-functions.azurewebsites.net/api/InsertAIConcept?code=XERJ0r6B3fgO2KjhagBIisPi/f6kRlrhRHujcyGkaCybNtFL4Rzjig==',
+    body: {
+        source: {
+            name: 'wikipedia',
+            accessedDate: Date.now(),
+            scriptVersion: packageJSON.version
+        },
+        active: true
+    },
+    json: true // Automatically stringifies the body to JSON
+};
 
 // TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0. Make sure not to insert duplicates into document db though.
+// Promises: https://developers.google.com/web/fundamentals/getting-started/primers/promises
 module.exports = function (cntxt, req) {
     context = cntxt;
     context.log('[WikipediaCategoryToAIConcepts] JavaScript HTTP trigger function processed a request.');
 
-    if (req.query.category || (req.body && req.body.category)) {
-        // TODO: Use a promise here and then say context is done once promise resolves.
-       GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category));
-  
-        // TODO: Wait until all insert requests succeed before marking this as done.
-        res = {
-            body: "WikipediaCategoryToAIConcepts complete"
-        };
-        context.done(null, res);
+    if (req.query.category || (req.body && req.body.category)) {       
+        context.log('[WikipediaCategoryToAIConcepts] category ' + req.body.category);
+        GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category))
+            .then(function(pageids){
+                GetPagesByPageids(pageids)
+                    .then(function(results){
+                        context.log('[WikipediaCategoryToAIConcepts] complete');
+                        res = {
+                            body: "WikipediaCategoryToAIConcepts complete"
+                        };
+                        context.done(null, res);
+                    }).catch(function(err){
+                        context.log('[GetPageidsByCategoryTitle] err');    
+                        context.log(err);
+                        res = {
+                            status: 400,
+                            body: err
+                        };            
+                        context.done(null, res);
+                    });
+            })
+            .catch(function(err){
+                context.log('[GetPageidsByCategoryTitle] err');   
+                context.log(err);             
+                context.done(null, res);
+            });
     }
     else {
         res = {
@@ -46,10 +78,6 @@ module.exports = function (cntxt, req) {
             body: "Please pass a category on the query string or in the request body"
         };
         context.done(null, res);
-        // stop execution of script at all done's while testing.
-        if(test){
-            process.exit();
-        }
     }
 };
 
@@ -57,52 +85,45 @@ module.exports = function (cntxt, req) {
 // TODO: Use a generator to get category and pageids at the same time
 // Takes in the string of the category title e.g. "Category:Computer vision"
 function GetPagesByCategoryTitle(category){
-    context.log('[GetPageidsByCategoryTitle] start ' + category);
+    context.log('[GetPageidsByCategoryTitle] start async');
+    return new Promise(function(resolve, reject) {
 
-    var pageids = [];
-    var url = getPageidsByCategoryTitleUrl.concat(encodeURIComponent(category));
-    options.url = url;
+        var pageids = [];
+        var url = getPageidsByCategoryTitleUrl.concat(encodeURIComponent(category));
+        getOptions.url = url;
 
-    // https://blog.risingstack.com/node-hero-node-js-request-module-tutorial/
-    request(options)
-        .then(function(response){
-            context.log('[GetPageidsByCategoryTitle] resolved ' + url);
-            response.query.categorymembers.forEach(function(element) {
-                pageids.push(element.pageid);
+        // https://blog.risingstack.com/node-hero-node-js-request-module-tutorial/
+        request(getOptions)
+            .then(function(response){
+                context.log('[GetPageidsByCategoryTitle] resolved ' + url);
+                response.query.categorymembers.forEach(function(element) {
+                    pageids.push(element.pageid);
+                });
+                resolve(pageids);
+            })
+            .catch(function(err){
+                context.log('[GetPageidsByCategoryTitle] rejected ' + url);
+                reject(err);
             });
-            // TODO: Return pageids using promises and then call this method in main function
-            GetPagesByPageids(pageids);
-        })
-        .catch(function(err){
-            context.log('[GetPageidsByCategoryTitle] rejected ' + url);
-            context.log(err);
-            context.done(null, res);
-            // stop execution of script while testing.
-            if(test){
-                process.exit();
-            }
-        });
+    });
 }
 
 // TODO: Turn into it's own azure function. Return a list of documents that then can be iterated over and inserted into document DB
 // TODO: Use wikipedia API's' continue functionality instead of custom batching system
 function GetPagesByPageids(pageids){
-    context.log('[GetPagesByPageids] start');
+    context.log('[GetPagesByPageids] start async');
 
-    var postOptions = {
-        method: 'POST',
-        // TODO: Store in an environment variable e.g. process.env[code];
-        uri: 'https://conversational-agent-functions.azurewebsites.net/api/InsertAIConcept?code=XERJ0r6B3fgO2KjhagBIisPi/f6kRlrhRHujcyGkaCybNtFL4Rzjig==',
-        body: {
-            source: {
-                name: 'wikipedia',
-                accessedDate: Date.now(),
-                scriptVersion: packageJSON.version
-            },
-            active: true
-        },
-        json: true // Automatically stringifies the body to JSON
-    };
+    var urls = CreatePageidsUrls(pageids);
+    // This will return an array of all the results from GetPagesByUrl
+    return Promise.all(
+        urls.map(GetPagesByUrl)
+    ); 
+}
+
+function CreatePageidsUrls(pageids){
+    context.log('[CreatePageidsUrls] start ');
+    var urls = [];
+
     // Process in batches of 20
     var increment = 20;
     var lowerBound = 0;
@@ -110,76 +131,131 @@ function GetPagesByPageids(pageids){
     var remainingPageidsCount = pageids.length;
 
     while(remainingPageidsCount > 0){
-        context.log('[GetPagesByPageids] remainingPageidsCount ' + remainingPageidsCount);
+        context.log('[CreatePageidsUrls] remainingPageidsCount ' + remainingPageidsCount);
 
         if(upperBound > pageids.length) upperBound = remainingPageidsCount + lowerBound;
         var pageidsStr = pageids.slice(lowerBound, upperBound).join("|");
         var url = getPagesByPageidsUrl + encodeURIComponent(pageidsStr);
-        options.url = url;
+        urls.push(url);
 
         if(test){
-            context.log('[GetPagesByPageids] lowerBound ' + lowerBound);
-            context.log('[GetPagesByPageids] upperBound ' + upperBound);
-            context.log('[GetPagesByPageids] pageidsStr ' + pageidsStr);
+            context.log('[CreatePageidsUrls] lowerBound ' + lowerBound);
+            context.log('[CreatePageidsUrls] upperBound ' + upperBound);
+            context.log('[CreatePageidsUrls] pageidsStr ' + pageidsStr);
         }
 
         remainingPageidsCount = remainingPageidsCount - increment;
         lowerBound = lowerBound + increment;
         upperBound = upperBound + increment;
+    }
+    context.log('[CreatePageidsUrls] end');
+    return urls;
+}
 
-        request(options)
+function GetPagesByUrl(url){
+    context.log('[GetPagesByUrl] start async');
+
+    return new Promise(function(resolve, reject) {
+        getOptions.url = url;
+        // TODO: Make sure responses look like what we think they look like. Print them.
+        request(getOptions)
             .then(function(response){
-                context.log('[GetPagesByPageids] resolved ' + url);
+                context.log('[GetPagesByUrl] resolved ' + url);
 
+                var insertAIConceptPromises = [];
                 if(response.query.pageids){
                     response.query.pageids.forEach(function(element) {
                         if(response.query.pages[element].pageid
                             && response.query.pages[element].title
                             && response.query.pages[element].extract){
-                                postOptions.body.source.pageid = response.query.pages[element].pageid;
-                                postOptions.body.title = response.query.pages[element].title;
-                                postOptions.body.extract = response.query.pages[element].extract;
-                                try{
-                                    request(postOptions)
-                                        .then(function (parsedBody) {
-                                            context.log('[GetPagesByPageids] resolved ' + postOptions.uri);
-                                            context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
-                                            // stop execution of script while testing.
-                                            if(test){
-                                                process.exit();
-                                            }
-                                        })
-                                        .catch(function (err) {
-                                            context.log('[GetPagesByPageids] rejected ' + postOptions.uri);
-                                            context.log('[GetPagesByPageids] pageid ' + response.query.pages[element].pageid);
-                                            context.log(err);
-                                            // stop execution of script while testing.
-                                            if(test){                                          
-                                                context.done(null, res);    
-                                                process.exit();
-                                            }
-                                        });
-                                } catch (e) {
-                                    context.log(e);
-                                    if(err) context.log(err);
-                                    // stop execution of script while testing.
-                                    if(test){                                        
-                                        context.done(null, res);
-                                        process.exit();
-                                    }
-                                }
+
+                                insertAIConceptPromises.push(
+                                    InsertAIConcept(
+                                        response.query.pages[element].pageid,
+                                        response.query.pages[element].title,
+                                        response.query.pages[element].extract
+                                    )
+                                );
                         }
                     });
                 }
+                // success, return array of results from all promises
+                Promise.all(insertAIConceptPromises)
+                    .then(function(results){
+                        context.log('[GetPagesByUrl] promises resolved');
+                        resolve(results);
+                    })
+                    .catch(function(err){
+                        context.log('[GetPagesByUrl] promises rejected');
+                        // stop execution of script at all done's while testing.
+                        if(test){
+                            context.done(null, res);
+                            process.exit();
+                        }
+                        // TODO: what happens when one of the promises fails but the rest succeed? we don't want the whole thing to get rejected because of one failure.
+                        reject(err);
+                    });
             })
             .catch(function(err){
-                context.log('[GetPagesByPageids] rejected ' + url);
+                context.log('[GetPagesByUrl] rejected ' + url);
                 context.log(err);
                 // stop execution of script at all done's while testing.
                 if(test){
                     context.done(null, res);
                     process.exit();
                 }
-            });    
-    }
+                // failure
+                reject(err);
+            }); 
+    }); 
+}
+
+function InsertAIConcept(pageid, title, extract){
+    context.log('[InsertAIConcept] start async');
+
+    return new Promise(function(resolve, reject) {
+        postOptions.body.source.pageid = pageid;
+        postOptions.body.title = title;
+        postOptions.body.extract = extract;
+        try{
+            request(postOptions)
+                .then(function (parsedBody) {
+                    context.log('[InsertAIConcept] resolved ' + postOptions.uri);
+                    // TODO: Consider printing everything after its all returned in calling methods.
+                    context.log(parsedBody);
+                    // stop execution of script while testing.
+                    if(test){                                          
+                        context.done(null, res); 
+                        process.exit();
+                    }
+                    // success
+                    resolve(parsedBody);
+                })
+                .catch(function (err) {
+                    context.log('[InsertAIConcept] rejected ' + postOptions.uri);
+                    context.log('[InsertAIConcept] pageid ' + pageid);
+                    // TODO: Consider printing everything after its all returned in calling methods.
+                    context.log(err);
+                    // stop execution of script while testing.
+                    if(test){                                          
+                        context.done(null, res);    
+                        process.exit();
+                    }
+                    // failure
+                    reject(err);
+                });
+        } catch (e) {
+            // TODO: Consider printing everything after its all returned in calling methods.
+            context.log('[InsertAIConcept] exception');
+            context.log(e);
+            if(err) context.log(err);
+            // stop execution of script while testing.
+            if(test){                                        
+                context.done(null, res);
+                process.exit();
+            }
+            // failure
+            reject(e);
+        }
+    });
 }
