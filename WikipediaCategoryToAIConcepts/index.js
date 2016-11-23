@@ -20,6 +20,7 @@ var insertAIConceptUri = 'https://conversational-agent-functions.azurewebsites.n
 var userAgent = '[testing] Futurisma - A conversational agent that teaches AI by paulprae.com';
 
 // TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0.
+// TODO: Make sure this does stop all requests after a single request fails
 // Promises: https://developers.google.com/web/fundamentals/getting-started/primers/promises
 module.exports = function (cntxt, req) {
     context = cntxt;
@@ -30,8 +31,10 @@ module.exports = function (cntxt, req) {
 
         GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category))
             .then(function(pageids){
+                context.log('[WikipediaCategoryToAIConcepts] resolved first promise');
                 var urls = CreatePageidsUrls(pageids);
                 var wikiPageObjects = WikiPagesToObjectsByManyUrls(urls);
+                // TODO: Could return and handle in another then
                 Promise.all(
                         wikiPageObjects.map(InsertAIConcept)
                     ).then(function(results){
@@ -51,6 +54,7 @@ module.exports = function (cntxt, req) {
                     });
             })
             .catch(function(err){
+                context.log('[WikipediaCategoryToAIConcepts] rejected first promise');
                 context.log('[WikipediaCategoryToAIConcepts] failure');   
                 context.log(err);
                 res = {
@@ -68,6 +72,8 @@ module.exports = function (cntxt, req) {
         };
         context.done(null, res);
     }
+    
+    context.log('[WikipediaCategoryToAIConcepts] async fired');
 };
 
 // TODO: Handle case where there are more than 500 pages. Use API's continue param
@@ -77,35 +83,52 @@ function GetPagesByCategoryTitle(category){
     context.log('[GetPageidsByCategoryTitle] start async');
 
     return new Promise(function(resolve, reject) {
-        var pageids = [];
-        var getOptions = {
-            url: getPageidsByCategoryTitleUrl.concat(encodeURIComponent(category)),
-            method: 'GET',
-            headers: {
-                'User-Agent': userAgent
-            },
-            json: true
-        };
+        try{
+            var pageids = [];
+            var getOptions = {
+                url: getPageidsByCategoryTitleUrl.concat(encodeURIComponent(category)),
+                method: 'GET',
+                headers: {
+                    'User-Agent': userAgent
+                },
+                json: true
+            };
 
-        // https://blog.risingstack.com/node-hero-node-js-request-module-tutorial/
-        request(getOptions)
-            .then(function(response){
-                context.log('[GetPageidsByCategoryTitle] resolved ' + url);
-                response.query.categorymembers.forEach(function(element) {
-                    pageids.push(element.pageid);
+            if(test){
+                context.log(getOptions);
+            }
+
+            // https://blog.risingstack.com/node-hero-node-js-request-module-tutorial/
+            request(getOptions)
+                .then(function(response){
+                    context.log('[GetPageidsByCategoryTitle] resolved ' + url);
+                    response.query.categorymembers.forEach(function(element) {
+                        pageids.push(element.pageid);
+                    });
+                    resolve(pageids);
+                })
+                .catch(function(err){
+                    context.log('[GetPageidsByCategoryTitle] rejected ' + url);
+                    context.log(err);
+                    // stop execution of script at all done's while testing.
+                    if(test){
+                        context.done(null, res);
+                        process.exit();
+                    }
+                    reject(err);
                 });
-                resolve(pageids);
-            })
-            .catch(function(err){
-                context.log('[GetPageidsByCategoryTitle] rejected ' + url);
-                context.log(err);
-                // stop execution of script at all done's while testing.
-                if(test){
-                    context.done(null, res);
-                    process.exit();
-                }
-                reject(err);
-            });
+        } catch (e) {
+            context.log('[GetPageidsByCategoryTitle] exception');
+            context.log(e);
+            if(err) context.log(err);
+            // stop execution of script while testing.
+            if(test){                                        
+                context.done(null, res);
+                process.exit();
+            }
+            // failure
+            reject(e);
+        }
     });
 }
 
