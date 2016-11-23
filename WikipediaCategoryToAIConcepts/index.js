@@ -21,6 +21,7 @@ var userAgent = '[testing] Futurisma - A conversational agent that teaches AI by
 
 // TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0.
 // TODO: Make sure this does stop all requests after a single request fails
+// Category must by valid for a url. All spaces replaced with '_', underscore.
 // Promises: https://developers.google.com/web/fundamentals/getting-started/primers/promises
 module.exports = function (cntxt, req) {
     context = cntxt;
@@ -31,27 +32,36 @@ module.exports = function (cntxt, req) {
 
         GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category))
             .then(function(pageids){
-                context.log('[WikipediaCategoryToAIConcepts] resolved first promise');
-                var urls = CreatePageidsUrls(pageids);
-                var wikiPageObjects = WikiPagesToObjectsByManyUrls(urls);
-                // TODO: Could return and handle in another then
-                Promise.all(
-                        wikiPageObjects.map(InsertAIConcept)
-                    ).then(function(results){
-                        context.log('[WikipediaCategoryToAIConcepts] success');
-                        res = {
-                            body: "WikipediaCategoryToAIConcepts success"
-                        };
-                        context.done(null, res);
-                    }).catch(function(err){
-                        context.log('[WikipediaCategoryToAIConcepts] failure');    
-                        context.log(err);
-                        res = {
-                            status: 400,
-                            body: err
-                        };            
-                        context.done(null, res);
-                    });
+                if(pageids && pageids.length > 1){
+                    context.log('[WikipediaCategoryToAIConcepts] resolved first promise');
+                    var urls = CreatePageidsUrls(pageids);
+                    var wikiPageObjects = WikiPagesToObjectsByManyUrls(urls);
+                    // TODO: Could return and handle in another then
+                    Promise.all(
+                            wikiPageObjects.map(InsertAIConcept)
+                        ).then(function(results){
+                            context.log('[WikipediaCategoryToAIConcepts] success. Processed ' + pageids.length + ' pageids.');
+                            res = {
+                                body: "WikipediaCategoryToAIConcepts success. Processed " + pageids.length + " pageids."
+                            };
+                            context.done(null, res);
+                        }).catch(function(err){
+                            context.log('[WikipediaCategoryToAIConcepts] failure');    
+                            context.log(err);
+                            res = {
+                                status: 400,
+                                body: err
+                            };            
+                            context.done(null, res);
+                        });
+                }
+                else {
+                    context.log('[WikipediaCategoryToAIConcepts] success. No pageids to process in the category.');  
+                    res = {
+                        body: "[WikipediaCategoryToAIConcepts] success. No pageids to process in the category."
+                    };
+                    context.done(null, res);
+                }
             })
             .catch(function(err){
                 context.log('[WikipediaCategoryToAIConcepts] rejected first promise');
@@ -78,15 +88,14 @@ module.exports = function (cntxt, req) {
 
 // TODO: Handle case where there are more than 500 pages. Use API's continue param
 // TODO: Use a generator to get category and pageids at the same time
-// Takes in the string of the category title e.g. "Category:Computer vision"
+// Takes in the string of the category title e.g. "Category:Computer_vision"
 function GetPagesByCategoryTitle(category){
     context.log('[GetPageidsByCategoryTitle] start async');
 
     return new Promise(function(resolve, reject) {
         try{
-            var pageids = [];
             var getOptions = {
-                url: getPageidsByCategoryTitleUrl.concat(encodeURIComponent(category)),
+                url: getPageidsByCategoryTitleUrl + category,
                 method: 'GET',
                 headers: {
                     'User-Agent': userAgent
@@ -98,6 +107,7 @@ function GetPagesByCategoryTitle(category){
                 context.log(getOptions);
             }
 
+            var pageids = [];
             // https://blog.risingstack.com/node-hero-node-js-request-module-tutorial/
             request(getOptions)
                 .then(function(response){
