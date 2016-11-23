@@ -98,7 +98,7 @@ function GetPagesByCategoryTitle(category){
     return new Promise(function(resolve, reject) {
         try{
             var getOptions = {
-                url: getPageidsByCategoryTitleUrl + category,
+                url: (getPageidsByCategoryTitleUrl + category),
                 method: 'GET',
                 headers: {
                     'User-Agent': userAgent
@@ -113,7 +113,7 @@ function GetPagesByCategoryTitle(category){
 
             var pageids = [];
             // https://blog.risingstack.com/node-hero-node-js-request-module-tutorial/
-            request(getOptions)
+            request((getPageidsByCategoryTitleUrl + category))
                 .then(function(response){
                     context.log('[GetPageidsByCategoryTitle] resolved ' + url);
                     response.query.categorymembers.forEach(function(element) {
