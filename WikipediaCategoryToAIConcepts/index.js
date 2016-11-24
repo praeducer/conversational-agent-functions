@@ -292,7 +292,7 @@ function InsertAIConcept(wikiPageObject){
                 .catch(function (err) {
                     // TODO: Consider printing everything after its all returned in calling methods to prevent strange async stuff.
                     context.log('[InsertAIConcept] rejected ' + postOptions.uri);
-                    context.log('[InsertAIConcept] pageid ' + pageid);
+                    context.log('[InsertAIConcept] pageid ' + wikiPageObject.pageid);
                     context.log(err);
                     reject(err);
                 });

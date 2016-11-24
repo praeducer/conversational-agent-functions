@@ -43,7 +43,10 @@ module.exports = function (cntxt, req) {
             .catch(function(err){
                 context.log('[InsertAIConcept] rejected ' + req.body.source.pageid);
                 context.log(err);
-                // TODO: Is this redundant? Does catch happen even if then runs?
+                context.res = {
+                    status: 400,
+                    body: err
+                };
                 context.done(null, context.res);
             });
     }
