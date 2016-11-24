@@ -228,10 +228,12 @@ function WikiPagesToObjectsByUrl(url){
                 
                 var wikiPageObjects = [];
                 if(response.query.pageids){
-                    response.query.pageids.forEach(function(element) {
+                    response.query.pageids.forEach(function(element, index) {
+                        context.log('[WikiPagesToObjectsByUrl] processing element ' + element + ' at index ' + index);
                         if(response.query.pages[element].pageid
                             && response.query.pages[element].title
                             && response.query.pages[element].extract){
+                                context.log('[WikiPagesToObjectsByUrl] pushing ' + response.query.pages[element].title);
                                 wikiPageObjects.push(
                                     {
                                         pageid: response.query.pages[element].pageid,
@@ -239,6 +241,8 @@ function WikiPagesToObjectsByUrl(url){
                                         extract: response.query.pages[element].extract
                                     }
                                 );
+                        } else {
+                            context.log('[WikiPagesToObjectsByUrl] element missing data ' + element);
                         }
                     });
                 }
