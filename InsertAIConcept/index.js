@@ -14,7 +14,7 @@ var collectionUrl = databaseUrl + '/colls/' + config.collection.id;
 // TODO: Handle batches of documents
 // TODO: Only updated if a revision was made since the last time the script was ran: https://www.mediawiki.org/wiki/API:Revisions
 module.exports = function (cntxt, req) {
-    var context = cntxt;
+    context = cntxt;
     context.log('[InsertAIConcept] JavaScript HTTP trigger function processed a request.');
 
     if (req.body && req.body.source && req.body.source.pageid && req.body.title && req.body.extract) {
