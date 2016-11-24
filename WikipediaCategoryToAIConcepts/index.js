@@ -154,7 +154,7 @@ function CreatePageidsUrls(pageids){
     var remainingPageidsCount = pageids.length;
 
     while(remainingPageidsCount > 0){
-        context.log('[CreatePageidsUrls] remainingPageidsCount ' + remainingPageidsCount);
+        if(verbose) context.log('[CreatePageidsUrls] remainingPageidsCount ' + remainingPageidsCount);
 
         if(upperBound > pageids.length) upperBound = remainingPageidsCount + lowerBound;
         var pageidsStr = pageids.slice(lowerBound, upperBound).join("|");
@@ -186,11 +186,16 @@ function WikiPagesToObjectsByManyUrls(urls){
             urls.map(WikiPagesToObjectsByUrl)
         ).then(function(arrayOfResults){       
             context.log('[WikiPagesToObjectsByManyUrls] resolved urls.map(WikiPagesToObjectsByUrl) promises');
-            if(test) context.log('[WikiPagesToObjectsByManyUrls] arrayOfResults.length ' + arrayOfResults.length);
+            if(verbose) context.log('[WikiPagesToObjectsByManyUrls] arrayOfResults.length ' + arrayOfResults.length);
             var wikiPageObjects = [];
             // Turn into a single dimensional array
-            arrayOfResults.forEach(function(results){
+            arrayOfResults.forEach(function(results, index){
                 wikiPageObjects = wikiPageObjects.concat(results);
+                if(test){
+                    context.log('[WikiPagesToObjectsByManyUrls] concat results ' + index);
+                    context.log(results);
+                    context.log('[WikiPagesToObjectsByManyUrls] current wikiPageObjects.length ' + wikiPageObjects.length);
+                }
             });
             resolve(wikiPageObjects);
         })
