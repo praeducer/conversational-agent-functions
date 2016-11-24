@@ -192,9 +192,10 @@ function WikiPagesToObjectsByManyUrls(urls){
             arrayOfResults.forEach(function(results, index){
                 wikiPageObjects = wikiPageObjects.concat(results);
                 if(test){
-                    context.log('[WikiPagesToObjectsByManyUrls] concat results ' + index);
-                    context.log(results);
-                    context.log('[WikiPagesToObjectsByManyUrls] current wikiPageObjects.length ' + wikiPageObjects.length);
+                    context.log('[WikiPagesToObjectsByManyUrls] results ' + index);
+                    context.log('[WikiPagesToObjectsByManyUrls] results.length ' + results.length);
+                    //context.log(results);
+                    context.log('[WikiPagesToObjectsByManyUrls] concat wikiPageObjects.length ' + wikiPageObjects.length);
                 }
             });
             resolve(wikiPageObjects);
@@ -224,10 +225,6 @@ function WikiPagesToObjectsByUrl(url){
         request(getOptions)
             .then(function(response){
                 context.log('[WikiPagesToObjectsByUrl] resolved ' + url);
-                if(verbose){
-                    context.log('[WikiPagesToObjectsByUrl] response');
-                    context.log(response);
-                }
                 
                 var wikiPageObjects = [];
                 if(response.query.pageids){
@@ -244,6 +241,11 @@ function WikiPagesToObjectsByUrl(url){
                                 );
                         }
                     });
+                }
+                if(test){
+                    //context.log('[WikiPagesToObjectsByUrl] response');
+                    //context.log(response);
+                    context.log('[WikiPagesToObjectsByUrl] wikiPageObjects.length ' + wikiPageObjects.length);
                 }
                 resolve(wikiPageObjects);
             })
