@@ -47,7 +47,6 @@ module.exports = function (cntxt, req) {
                     status: 400,
                     body: err
                 };
-                context.done(null, context.res);
             });
     } else {
         context.log('[InsertAIConcept] missing body');

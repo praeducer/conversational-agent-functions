@@ -38,7 +38,7 @@ module.exports = function (cntxt, req) {
         GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category))
             .then(function(pageids){
                 if(pageids && pageids.length > 1){
-                    context.log('[WikipediaCategoryToAIConcepts] resolved GetPagesByCategoryTitle promise');                   
+                    if(verbose) context.log('[WikipediaCategoryToAIConcepts] resolved GetPagesByCategoryTitle promise');                   
                     context.log('[WikipediaCategoryToAIConcepts] processing ' + pageids.length + ' pageids.');
 
                     var urls = CreatePageidsUrls(pageids);
@@ -91,7 +91,7 @@ module.exports = function (cntxt, req) {
         context.done(null, res);
     }
     
-    context.log('[WikipediaCategoryToAIConcepts] async fired');
+    if(verbose) context.log('[WikipediaCategoryToAIConcepts] async fired');
 };
 
 // TODO: Handle case where there are more than 500 pages. Use API's continue param
@@ -112,7 +112,7 @@ function GetPagesByCategoryTitle(category){
                 json: true
             };
 
-            if(test){
+            if(verbose){
                 context.log('[GetPageidsByCategoryTitle] options');
                 context.log(getOptions);
             }
@@ -139,12 +139,12 @@ function GetPagesByCategoryTitle(category){
             reject(e);
         }
         
-        if(test) context.log('[GetPageidsByCategoryTitle] promise created');
+        if(verbose) context.log('[GetPageidsByCategoryTitle] promise created');
     });
 }
 
 function CreatePageidsUrls(pageids){
-    context.log('[CreatePageidsUrls] called');
+    if(verbose) context.log('[CreatePageidsUrls] called');
     var urls = [];
 
     // Process in batches of 20
@@ -210,7 +210,7 @@ function WikiPagesToObjectsByManyUrls(urls){
 }
 
 function WikiPagesToObjectsByUrl(url){
-    context.log('[WikiPagesToObjectsByUrl] start async');
+    if(verbose) context.log('[WikiPagesToObjectsByUrl] start async');
 
     return new Promise(function(resolve, reject) {
         var getOptions = {
@@ -300,5 +300,5 @@ function InsertAIConcept(wikiPageObject){
         reject(e);
     }
     
-    context.log('[InsertAIConcept] completed request ' + wikiPageObject.pageid);
+    if(verbose) context.log('[InsertAIConcept] completed request ' + wikiPageObject.pageid);
 }
