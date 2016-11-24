@@ -48,9 +48,9 @@ module.exports = function (cntxt, req) {
 
                             wikiPageObjects.map(InsertAIConcept);
                             context.log('[WikipediaCategoryToAIConcepts] wikiPageObjects.map completed');
-                            context.log('[WikipediaCategoryToAIConcepts] success. Processed ' + pageids.length + ' pageids.');
+                            context.log('[WikipediaCategoryToAIConcepts] success. Processed ' + wikiPageObjects.length + ' pageids.');
                             res = {
-                                body: "WikipediaCategoryToAIConcepts success. Processed " + pageids.length + " pageids."
+                                body: "WikipediaCategoryToAIConcepts success. Processed " + wikiPageObjects.length + " pageids."
                             };
                             context.done(null, res);
                         })
@@ -186,6 +186,7 @@ function WikiPagesToObjectsByManyUrls(urls){
             urls.map(WikiPagesToObjectsByUrl)
         ).then(function(arrayOfResults){       
             context.log('[WikiPagesToObjectsByManyUrls] resolved urls.map(WikiPagesToObjectsByUrl) promises');
+            if(test) context.log('[WikiPagesToObjectsByManyUrls] arrayOfResults.length ' + arrayOfResults.length);
             var wikiPageObjects = [];
             // Turn into a single dimensional array
             arrayOfResults.forEach(function(results){
@@ -273,7 +274,7 @@ function InsertAIConcept(wikiPageObject){
         };
         
         // TODO: Change to verbose/wikiPageObject
-        if(test){      
+        if(verbose){      
             context.log('[InsertAIConcept] postOptions');
             context.log(postOptions);
         }
