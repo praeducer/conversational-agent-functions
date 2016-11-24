@@ -1,8 +1,8 @@
 // For testing
-var test = true;
+var test = false;
 var verbose = false;
 // TODO: setup to run local: context = console, var res, var req, hide all dones, call instead of exporting the main function
-var local = true;
+var local = false;
 
 // https://github.com/request/request-promise
 const request = require('request-promise')  
@@ -21,7 +21,7 @@ var getSubCategoryByCategoryTitleUrl = 'https://en.wikipedia.org/w/api.php?actio
 var getPagesByPageidsUrl = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exlimit=20&exintro=&explaintext=&indexpageids=&pageids=';
 // TODO: Store in an environment variable e.g. process.env[code];
 var insertAIConceptUri = 'https://conversational-agent-functions.azurewebsites.net/api/InsertAIConcept?code=XERJ0r6B3fgO2KjhagBIisPi/f6kRlrhRHujcyGkaCybNtFL4Rzjig==';
-var userAgent = '[testing] Futurisma - A conversational agent that teaches AI by paulprae.com';
+var userAgent = 'Futurisma - A conversational agent that teaches AI by paulprae.com';
 
 // TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0.
 // TODO: Make sure this does not stop all requests after a single request fails
@@ -47,10 +47,10 @@ module.exports = function (cntxt, req) {
                             context.log('[WikipediaCategoryToAIConcepts] resolved WikiPagesToObjectsByManyUrls promise');
 
                             wikiPageObjects.map(InsertAIConcept);
-                            context.log('[WikipediaCategoryToAIConcepts] wikiPageObjects.map completed');
-                            context.log('[WikipediaCategoryToAIConcepts] success. Processed ' + wikiPageObjects.length + ' pageids.');
+                            if(verbose) context.log('[WikipediaCategoryToAIConcepts] wikiPageObjects.map completed');
+                            context.log('[WikipediaCategoryToAIConcepts] success. Inserted ' + wikiPageObjects.length + ' pageids.');
                             res = {
-                                body: "WikipediaCategoryToAIConcepts success. Processed " + wikiPageObjects.length + " pageids."
+                                body: "WikipediaCategoryToAIConcepts success. Inserted " + wikiPageObjects.length + " pageids."
                             };
                             context.done(null, res);
                         })
@@ -185,8 +185,10 @@ function WikiPagesToObjectsByManyUrls(urls){
         Promise.all(
             urls.map(WikiPagesToObjectsByUrl)
         ).then(function(arrayOfResults){       
-            context.log('[WikiPagesToObjectsByManyUrls] resolved urls.map(WikiPagesToObjectsByUrl) promises');
-            if(verbose) context.log('[WikiPagesToObjectsByManyUrls] arrayOfResults.length ' + arrayOfResults.length);
+            if(verbose){
+                context.log('[WikiPagesToObjectsByManyUrls] resolved urls.map(WikiPagesToObjectsByUrl) promises');
+                context.log('[WikiPagesToObjectsByManyUrls] arrayOfResults.length ' + arrayOfResults.length);
+            }
             var wikiPageObjects = [];
             // Turn into a single dimensional array
             arrayOfResults.forEach(function(results, index){
@@ -205,7 +207,7 @@ function WikiPagesToObjectsByManyUrls(urls){
             context.log(err);
             reject(err);
         });
-        context.log('[WikiPagesToObjectsByManyUrls] promise created');
+        if(verbose) context.log('[WikiPagesToObjectsByManyUrls] promise created');
     });
 }
 
@@ -264,7 +266,7 @@ function WikiPagesToObjectsByUrl(url){
 // TODO: Turn into its own azure function but take a batch of wikiPageObjects. Call it and leave it.
 // TODO: Insert category as well, especially after refactoring so this script is recursive to subcategories
 function InsertAIConcept(wikiPageObject){
-    context.log('[InsertAIConcept] pageid ' + wikiPageObject.pageid);
+    if(verbose) context.log('[InsertAIConcept] pageid ' + wikiPageObject.pageid);
 
     try{
         var postOptions = {
