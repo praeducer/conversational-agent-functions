@@ -38,7 +38,8 @@ module.exports = function (cntxt, req) {
                         body: '[InsertAIConcept] duplicate ' + req.body.source.pageid
                     };
                 }
-                context.done(null, context.res);
+                //context.done(null, context.res);
+                context.done();
             })
             .catch(function(err){
                 context.log('[InsertAIConcept] rejected ' + req.body.source.pageid);
@@ -47,6 +48,7 @@ module.exports = function (cntxt, req) {
                     status: 400,
                     body: err
                 };
+                //context.done(null, context.res);
             });
     } else {
         context.log('[InsertAIConcept] missing body');
@@ -54,7 +56,8 @@ module.exports = function (cntxt, req) {
             status: 400,
             body: 'Missing source.pageid or title or extract in the request body'
         };
-        context.done(null, context.res);
+        //context.done(null, context.res);
+        context.done();
     }
 };
 
