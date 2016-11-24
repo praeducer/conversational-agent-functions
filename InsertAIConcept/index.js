@@ -13,8 +13,7 @@ var collectionUrl = databaseUrl + '/colls/' + config.collection.id;
 
 // TODO: Handle batches of documents
 // TODO: Only updated if a revision was made since the last time the script was ran: https://www.mediawiki.org/wiki/API:Revisions
-module.exports = function (cntxt, req) {
-    context = cntxt;
+module.exports = function (context, req) {
     context.log('[InsertAIConcept] JavaScript HTTP trigger function processed a request.');
 
     if (req.body && req.body.source && req.body.source.pageid && req.body.title && req.body.extract) {
@@ -49,8 +48,7 @@ module.exports = function (cntxt, req) {
                 };
                 context.done(null, context.res);
             });
-    }
-    else {
+    } else {
         context.log('[InsertAIConcept] missing body');
         context.res = {
             status: 400,
@@ -65,12 +63,19 @@ function QueryCollection(pageid) {
     context.log('[QueryCollection] pageid ' + pageid + ' index ' + config.collection.id);
 
     return new Promise((resolve, reject) => {
-        client.queryDocuments(
-            collectionUrl,
-            'SELECT * FROM AIConcept AIC WHERE AIC.active = true AND AIC.source.pageid ='+ pageid
-        ).toArray((err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-        });
+        try {
+            client.queryDocuments(
+                collectionUrl,
+                'SELECT * FROM AIConcept AIC WHERE AIC.active = true AND AIC.source.pageid ='+ pageid
+            ).toArray((err, results) => {
+                if (err) reject(err);
+                else resolve(results);
+            });
+        } catch (e) {
+            context.log('[QueryCollection] exception');
+            context.log(e);
+            if(err) context.log(err);
+            reject(e);
+        }
     });
 };

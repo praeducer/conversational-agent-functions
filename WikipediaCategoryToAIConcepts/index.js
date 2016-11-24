@@ -1,5 +1,6 @@
 // For testing
 var test = true;
+var verbose = false;
 // TODO: setup to run local: context = console, var res, var req, hide all dones, call instead of exporting the main function
 var local = true;
 
@@ -45,25 +46,13 @@ module.exports = function (cntxt, req) {
                         .then(function(wikiPageObjects){
                             context.log('[WikipediaCategoryToAIConcepts] resolved WikiPagesToObjectsByManyUrls promise');
 
-                            Promise.all(
-                                    wikiPageObjects.map(InsertAIConcept)
-                                ).then(function(results){
-                                    context.log('[WikipediaCategoryToAIConcepts] resolved wikiPageObjects.map promises');
-                                    
-                                    context.log('[WikipediaCategoryToAIConcepts] success. Processed ' + pageids.length + ' pageids.');
-                                    res = {
-                                        body: "WikipediaCategoryToAIConcepts success. Processed " + pageids.length + " pageids."
-                                    };
-                                    context.done(null, res);
-                                }).catch(function(err){
-                                    context.log('[WikipediaCategoryToAIConcepts] rejected wikiPageObjects.map promises');    
-                                    context.log(err);
-                                    res = {
-                                        status: 400,
-                                        body: err
-                                    };            
-                                    context.done(null, res);
-                                });
+                            wikiPageObjects.map(InsertAIConcept);
+                            context.log('[WikipediaCategoryToAIConcepts] wikiPageObjects.map completed');
+                            context.log('[WikipediaCategoryToAIConcepts] success. Processed ' + pageids.length + ' pageids.');
+                            res = {
+                                body: "WikipediaCategoryToAIConcepts success. Processed " + pageids.length + " pageids."
+                            };
+                            context.done(null, res);
                         })
                         .catch(function(err){
                             context.log('[WikipediaCategoryToAIConcepts] rejected WikiPagesToObjectsByManyUrls promise');    
@@ -155,7 +144,7 @@ function GetPagesByCategoryTitle(category){
 }
 
 function CreatePageidsUrls(pageids){
-    context.log('[CreatePageidsUrls] start ');
+    context.log('[CreatePageidsUrls] called');
     var urls = [];
 
     // Process in batches of 20
@@ -172,7 +161,7 @@ function CreatePageidsUrls(pageids){
         var url = getPagesByPageidsUrl + encodeURIComponent(pageidsStr);
         urls.push(url);
 
-        if(test){
+        if(verbose){
             context.log('[CreatePageidsUrls] lowerBound ' + lowerBound);
             context.log('[CreatePageidsUrls] upperBound ' + upperBound);
             context.log('[CreatePageidsUrls] pageidsStr ' + pageidsStr);
@@ -182,7 +171,7 @@ function CreatePageidsUrls(pageids){
         lowerBound = lowerBound + increment;
         upperBound = upperBound + increment;
     }
-    context.log('[CreatePageidsUrls] end');
+    context.log('[CreatePageidsUrls] completed');
     return urls;
 }
 
@@ -229,7 +218,7 @@ function WikiPagesToObjectsByUrl(url){
         request(getOptions)
             .then(function(response){
                 context.log('[WikiPagesToObjectsByUrl] resolved ' + url);
-                if(test){
+                if(verbose){
                     context.log('[WikiPagesToObjectsByUrl] response');
                     context.log(response);
                 }
@@ -260,11 +249,12 @@ function WikiPagesToObjectsByUrl(url){
     }); 
 }
 
+// TODO: Turn into its own azure function but take a batch of wikiPageObjects. Call it and leave it.
 // TODO: Insert category as well, especially after refactoring so this script is recursive to subcategories
 function InsertAIConcept(wikiPageObject){
-    context.log('[InsertAIConcept] start async');
+    context.log('[InsertAIConcept] pageid ' + wikiPageObject.pageid);
 
-    return new Promise(function(resolve, reject) {
+    try{
         var postOptions = {
             method: 'POST',
             uri: insertAIConceptUri,
@@ -281,27 +271,22 @@ function InsertAIConcept(wikiPageObject){
             },
             json: true // Automatically stringifies the body to JSON
         };
-        try{
-            request(postOptions)
-                .then(function (parsedBody) {
-                    // TODO: Consider printing everything after its all returned in calling methods to prevent strange async stuff.
-                    context.log('[InsertAIConcept] resolved ' + postOptions.uri);
-                    context.log(parsedBody);
-                    resolve(parsedBody);
-                })
-                .catch(function (err) {
-                    // TODO: Consider printing everything after its all returned in calling methods to prevent strange async stuff.
-                    context.log('[InsertAIConcept] rejected ' + postOptions.uri);
-                    context.log('[InsertAIConcept] pageid ' + wikiPageObject.pageid);
-                    context.log(err);
-                    reject(err);
-                });
-        } catch (e) {
-            // TODO: Consider printing everything after its all returned in calling methods to prevent strange async stuff.
-            context.log('[InsertAIConcept] exception');
-            context.log(e);
-            if(err) context.log(err);
-            reject(e);
+        
+        // TODO: Change to verbose/wikiPageObject
+        if(test){      
+            context.log('[InsertAIConcept] postOptions');
+            context.log(postOptions);
         }
-    });
+        
+        request(postOptions);
+
+    } catch (e) {
+        // TODO: Consider printing everything after its all returned in calling methods to prevent strange async stuff.
+        context.log('[InsertAIConcept] exception');
+        context.log(e);
+        if(err) context.log(err);
+        reject(e);
+    }
+    
+    context.log('[InsertAIConcept] completed request ' + wikiPageObject.pageid);
 }
