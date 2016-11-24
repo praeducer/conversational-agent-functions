@@ -1,5 +1,7 @@
 // For testing
 var test = true;
+// TODO: setup to run local: context = console, var res, var req, hide all dones, call instead of exporting the main function
+var local = true;
 
 // https://github.com/request/request-promise
 const request = require('request-promise')  
@@ -16,11 +18,13 @@ var getSubCategoryByCategoryTitleUrl = 'https://en.wikipedia.org/w/api.php?actio
 // https://www.mediawiki.org/wiki/Extension:TextExtracts
 // TODO: Remove exintro= to get full text. May help with search.
 var getPagesByPageidsUrl = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&indexpageids=&pageids=';
+// TODO: Store in an environment variable e.g. process.env[code];
 var insertAIConceptUri = 'https://conversational-agent-functions.azurewebsites.net/api/InsertAIConcept?code=XERJ0r6B3fgO2KjhagBIisPi/f6kRlrhRHujcyGkaCybNtFL4Rzjig==';
 var userAgent = '[testing] Futurisma - A conversational agent that teaches AI by paulprae.com';
 
 // TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0.
-// TODO: Make sure this does stop all requests after a single request fails
+// TODO: Make sure this does not stop all requests after a single request fails
+// TODO: Config this so it can run locally or on azure
 // Category must by valid for a url. All spaces replaced with '_', underscore.
 // Promises: https://developers.google.com/web/fundamentals/getting-started/primers/promises
 module.exports = function (cntxt, req) {
@@ -33,23 +37,36 @@ module.exports = function (cntxt, req) {
         GetPagesByCategoryTitle('Category:' + (req.query.category || req.body.category))
             .then(function(pageids){
                 if(pageids && pageids.length > 1){
-                    if(test){
-                        context.log('[WikipediaCategoryToAIConcepts] resolved first promise');                   
-                        context.log('[WikipediaCategoryToAIConcepts] processing ' + pageids.length + ' pageids.');
-                    }
+                    context.log('[WikipediaCategoryToAIConcepts] resolved GetPagesByCategoryTitle promise');                   
+                    context.log('[WikipediaCategoryToAIConcepts] processing ' + pageids.length + ' pageids.');
+
                     var urls = CreatePageidsUrls(pageids);
-                    var wikiPageObjects = WikiPagesToObjectsByManyUrls(urls);
-                    // TODO: Could return and handle in another then
-                    Promise.all(
-                            wikiPageObjects.map(InsertAIConcept)
-                        ).then(function(results){
-                            context.log('[WikipediaCategoryToAIConcepts] success. Processed ' + pageids.length + ' pageids.');
-                            res = {
-                                body: "WikipediaCategoryToAIConcepts success. Processed " + pageids.length + " pageids."
-                            };
-                            context.done(null, res);
-                        }).catch(function(err){
-                            context.log('[WikipediaCategoryToAIConcepts] failure');    
+                    WikiPagesToObjectsByManyUrls(urls)
+                        .then(function(wikiPageObjects){
+                            context.log('[WikipediaCategoryToAIConcepts] resolved WikiPagesToObjectsByManyUrls promise');
+
+                            Promise.all(
+                                    wikiPageObjects.map(InsertAIConcept)
+                                ).then(function(results){
+                                    context.log('[WikipediaCategoryToAIConcepts] resolved wikiPageObjects.map promises');
+                                    
+                                    context.log('[WikipediaCategoryToAIConcepts] success. Processed ' + pageids.length + ' pageids.');
+                                    res = {
+                                        body: "WikipediaCategoryToAIConcepts success. Processed " + pageids.length + " pageids."
+                                    };
+                                    context.done(null, res);
+                                }).catch(function(err){
+                                    context.log('[WikipediaCategoryToAIConcepts] rejected wikiPageObjects.map promises');    
+                                    context.log(err);
+                                    res = {
+                                        status: 400,
+                                        body: err
+                                    };            
+                                    context.done(null, res);
+                                });
+                        })
+                        .catch(function(err){
+                            context.log('[WikipediaCategoryToAIConcepts] rejected WikiPagesToObjectsByManyUrls promise');    
                             context.log(err);
                             res = {
                                 status: 400,
@@ -67,8 +84,7 @@ module.exports = function (cntxt, req) {
                 }
             })
             .catch(function(err){
-                context.log('[WikipediaCategoryToAIConcepts] rejected first promise');
-                context.log('[WikipediaCategoryToAIConcepts] failure');   
+                context.log('[WikipediaCategoryToAIConcepts] caught err');
                 context.log(err);
                 res = {
                     status: 400,
@@ -114,7 +130,6 @@ function GetPagesByCategoryTitle(category){
 
             var pageids = [];
             // https://blog.risingstack.com/node-hero-node-js-request-module-tutorial/
-            // TODO: Replace with getOptions
             request(getOptions)
                 .then(function(response){
                     context.log('[GetPageidsByCategoryTitle] resolved ' + url);
@@ -126,21 +141,12 @@ function GetPagesByCategoryTitle(category){
                 .catch(function(err){
                     context.log('[GetPageidsByCategoryTitle] rejected ' + url);
                     context.log(err);
-                    // stop execution of script at all done's while testing.
-                    if(test){
-                        context.done(null, res);
-                    }
                     reject(err);
                 });
         } catch (e) {
             context.log('[GetPageidsByCategoryTitle] exception');
             context.log(e);
             if(err) context.log(err);
-            // stop execution of script while testing.
-            if(test){                                        
-                context.done(null, res);
-            }
-            // failure
             reject(e);
         }
         
@@ -185,29 +191,25 @@ function CreatePageidsUrls(pageids){
 function WikiPagesToObjectsByManyUrls(urls){
     context.log('[WikiPagesToObjectsByManyUrls] start async');
 
-    var wikiPageObjects = [];  
-    // This will return an array of all the results
-    // TODO: Is this async? Does the calling method need to expect a promise or does the then make this act sync?
-    Promise.all(
-        urls.map(WikiPagesToObjectsByUrl)
-    ).then(function(arrayOfResults){       
-        context.log('[WikiPagesToObjectsByManyUrls] Promise.all success');
-        // Turn into a single dimensional array
-        arrayOfResults.forEach(function(results){
-            wikiPageObjects = wikiPageObjects.concat(results);
+    return new Promise(function(resolve, reject){
+        // This will return an array of all the results
+        Promise.all(
+            urls.map(WikiPagesToObjectsByUrl)
+        ).then(function(arrayOfResults){       
+            context.log('[WikiPagesToObjectsByManyUrls] resolved urls.map(WikiPagesToObjectsByUrl) promises');
+            var wikiPageObjects = [];
+            // Turn into a single dimensional array
+            arrayOfResults.forEach(function(results){
+                wikiPageObjects = wikiPageObjects.concat(results);
+            });
+            resolve(wikiPageObjects);
+        })
+        .catch(function(err){
+            context.log('[WikiPagesToObjectsByManyUrls] rejected urls.map(WikiPagesToObjectsByUrl) promises');
+            context.log(err);
+            reject(err);
         });
-        return wikiPageObjects;
-    })
-    .catch(function(err){
-        context.log('[WikiPagesToObjectsByManyUrls] Promise.all failure');
-        context.log(err);
-        // stop execution of script at all done's while testing.
-        if(test){
-            context.done(null, res);
-        }
-        // failure
-        // TODO: Fail silently. Don't want one issue to stop all inserts
-        return wikiPageObjects;
+        context.log('[WikiPagesToObjectsByManyUrls] promise created');
     });
 }
 
@@ -253,12 +255,6 @@ function WikiPagesToObjectsByUrl(url){
             .catch(function(err){
                 context.log('[WikiPagesToObjectsByUrl] rejected ' + url);
                 context.log(err);
-                // stop execution of script at all done's while testing.
-                if(test){
-                    context.done(null, res);
-                }
-                // failure
-                // TODO: Fail silently. Don't want one issue to stop all inserts
                 reject(err);
             }); 
     }); 
@@ -271,7 +267,6 @@ function InsertAIConcept(wikiPageObject){
     return new Promise(function(resolve, reject) {
         var postOptions = {
             method: 'POST',
-            // TODO: Store in an environment variable e.g. process.env[code];
             uri: insertAIConceptUri,
             body: {
                 source: {
@@ -292,12 +287,6 @@ function InsertAIConcept(wikiPageObject){
                     // TODO: Consider printing everything after its all returned in calling methods to prevent strange async stuff.
                     context.log('[InsertAIConcept] resolved ' + postOptions.uri);
                     context.log(parsedBody);
-                    // stop execution of script while testing.
-                    // TODO: Remove after initial test. Still want to fail on errors after initial test.
-                    if(test){                                          
-                        context.done(null, res); 
-                    }
-                    // success
                     resolve(parsedBody);
                 })
                 .catch(function (err) {
@@ -305,11 +294,6 @@ function InsertAIConcept(wikiPageObject){
                     context.log('[InsertAIConcept] rejected ' + postOptions.uri);
                     context.log('[InsertAIConcept] pageid ' + pageid);
                     context.log(err);
-                    // stop execution of script while testing.
-                    if(test){                                          
-                        context.done(null, res);
-                    }
-                    // failure
                     reject(err);
                 });
         } catch (e) {
@@ -317,11 +301,6 @@ function InsertAIConcept(wikiPageObject){
             context.log('[InsertAIConcept] exception');
             context.log(e);
             if(err) context.log(err);
-            // stop execution of script while testing.
-            if(test){                                        
-                context.done(null, res);
-            }
-            // failure
             reject(e);
         }
     });
