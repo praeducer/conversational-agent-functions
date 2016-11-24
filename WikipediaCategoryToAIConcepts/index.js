@@ -18,7 +18,7 @@ var getPageidsByCategoryTitleUrl = 'https://en.wikipedia.org/w/api.php?action=qu
 var getSubCategoryByCategoryTitleUrl = 'https://en.wikipedia.org/w/api.php?action=query&format=json&list=categorymembers&cmtype=subcat&cmtitle='
 // https://www.mediawiki.org/wiki/Extension:TextExtracts
 // TODO: Remove exintro= to get full text. May help with search.
-var getPagesByPageidsUrl = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&indexpageids=&pageids=';
+var getPagesByPageidsUrl = 'https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exlimit=20&exintro=&explaintext=&indexpageids=&pageids=';
 // TODO: Store in an environment variable e.g. process.env[code];
 var insertAIConceptUri = 'https://conversational-agent-functions.azurewebsites.net/api/InsertAIConcept?code=XERJ0r6B3fgO2KjhagBIisPi/f6kRlrhRHujcyGkaCybNtFL4Rzjig==';
 var userAgent = '[testing] Futurisma - A conversational agent that teaches AI by paulprae.com';
@@ -191,10 +191,10 @@ function WikiPagesToObjectsByManyUrls(urls){
             // Turn into a single dimensional array
             arrayOfResults.forEach(function(results, index){
                 wikiPageObjects = wikiPageObjects.concat(results);
-                if(test){
+                if(verbose){
                     context.log('[WikiPagesToObjectsByManyUrls] results ' + index);
                     context.log('[WikiPagesToObjectsByManyUrls] results.length ' + results.length);
-                    //context.log(results);
+                    context.log(results);
                     context.log('[WikiPagesToObjectsByManyUrls] concat wikiPageObjects.length ' + wikiPageObjects.length);
                 }
             });
@@ -229,11 +229,11 @@ function WikiPagesToObjectsByUrl(url){
                 var wikiPageObjects = [];
                 if(response.query.pageids){
                     response.query.pageids.forEach(function(element, index) {
-                        context.log('[WikiPagesToObjectsByUrl] processing element ' + element + ' at index ' + index);
+                        if(verbose) context.log('[WikiPagesToObjectsByUrl] processing element ' + element + ' at index ' + index);
                         if(response.query.pages[element].pageid
                             && response.query.pages[element].title
                             && response.query.pages[element].extract){
-                                context.log('[WikiPagesToObjectsByUrl] pushing ' + response.query.pages[element].title);
+                                if(verbose) context.log('[WikiPagesToObjectsByUrl] pushing ' + response.query.pages[element].title);
                                 wikiPageObjects.push(
                                     {
                                         pageid: response.query.pages[element].pageid,
@@ -242,13 +242,13 @@ function WikiPagesToObjectsByUrl(url){
                                     }
                                 );
                         } else {
-                            context.log('[WikiPagesToObjectsByUrl] element missing data ' + element);
+                            if(verbose) context.log('[WikiPagesToObjectsByUrl] element missing data ' + element);
                         }
                     });
                 }
-                if(test){
-                    //context.log('[WikiPagesToObjectsByUrl] response');
-                    //context.log(response);
+                if(verbose){
+                    context.log('[WikiPagesToObjectsByUrl] response');
+                    context.log(response);
                     context.log('[WikiPagesToObjectsByUrl] wikiPageObjects.length ' + wikiPageObjects.length);
                 }
                 resolve(wikiPageObjects);
