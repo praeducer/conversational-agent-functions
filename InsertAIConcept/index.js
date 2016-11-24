@@ -23,40 +23,20 @@ module.exports = function (cntxt, req) {
                 // If there is not an entry already         
                 if(results && results.length == 0){
                     context.log('[InsertAIConcept] inserting ' + req.body.source.pageid);
-                    context.res = {
-                        // status: 200, /* Defaults to 200 */
-                        body: '[InsertAIConcept] inserting ' + req.body.source.pageid
-                    };
                     context.bindings.AIConceptDocument = req.body;
                 }
                 else
                 {
                     context.log('[InsertAIConcept] duplicate ' + req.body.source.pageid);
-                    context.res = {
-                        // TODO: A duplicate is ok but we should let the client know through a more useful status code
-                        status: 200,
-                        body: '[InsertAIConcept] duplicate ' + req.body.source.pageid
-                    };
                 }
-                //context.done(null, context.res);
                 context.done();
             })
             .catch(function(err){
                 context.log('[InsertAIConcept] rejected ' + req.body.source.pageid);
                 context.log(err);
-                context.res = {
-                    status: 400,
-                    body: err
-                };
-                //context.done(null, context.res);
             });
     } else {
         context.log('[InsertAIConcept] missing body');
-        context.res = {
-            status: 400,
-            body: 'Missing source.pageid or title or extract in the request body'
-        };
-        //context.done(null, context.res);
         context.done();
     }
 };
