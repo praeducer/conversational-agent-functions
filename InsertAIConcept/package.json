@@ -24,6 +24,6 @@
     "conversational"
   ],
   "author": "Paul Prae",
-  "contributors": [],
-  "license": ""
+  "contributors": ["Austin New"],
+  "license": "MIT"
 }

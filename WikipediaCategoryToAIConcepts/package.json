@@ -1,6 +1,6 @@
 {
   "name": "wikipedia-category-to-ai-concepts",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Given a Wikipedia category, store concepts in a KB",
   "main": "index.js",
   "scripts": {
@@ -25,6 +25,6 @@
     "conversational"
   ],
   "author": "Paul Prae",
-  "contributors": [],
-  "license": ""
+  "contributors": ["Austin New"],
+  "license": "MIT"
 }

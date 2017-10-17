@@ -13,14 +13,13 @@ var collectionUrl = databaseUrl + '/colls/' + config.collection.id;
 
 // TODO: Handle batches of documents
 // TODO: Only updated if a revision was made since the last time the script was ran: https://www.mediawiki.org/wiki/API:Revisions
-module.exports = function (cntxt, req) {
-    context = cntxt;
+module.exports = function (context, req) {
     context.log('[InsertAIConcept] JavaScript HTTP trigger function processed a request.');
 
     if (req.body && req.body.source && req.body.source.pageid && req.body.title && req.body.extract) {
         QueryCollection(req.body.source.pageid)
             .then(function(results){
-                // If there is not an entry already         
+                // If there is not an entry already
                 if(results && results.length == 0){
                     context.log('[InsertAIConcept] inserting ' + req.body.source.pageid);
                     context.bindings.AIConceptDocument = req.body;
