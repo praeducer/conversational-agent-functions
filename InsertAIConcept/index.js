@@ -41,10 +41,10 @@ module.exports = function(context, req) {
                     );
                 }
             })
-            .catch(context.done)
+            .then(context.done)
             .catch(function(err) {
                 context.log(
-                    "[InsertAIConcept] rejected " + req.body.source.pageid
+                    "[InsertAIConcept] insertion failed " + req.body.source.pageid
                 );
                 context.log.error(err);
             });
