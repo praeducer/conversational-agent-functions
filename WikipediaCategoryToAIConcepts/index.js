@@ -15,8 +15,7 @@ var packageJSON = JSON.parse(
 
 var wikipedia = require("./wikipedia");
 // TODO: Store in an environment variable e.g. process.env[code];
-var insertAIConceptUri =
-    "https://conversational-agent-functions.azurewebsites.net/api/InsertAIConcept?code=XERJ0r6B3fgO2KjhagBIisPi/f6kRlrhRHujcyGkaCybNtFL4Rzjig==";
+var insertAIConceptUri = "<YOUR AIConcept ENDPOINT HERE>"
 
 // TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0.
 // TODO: Make sure this does not stop all requests after a single request fails
