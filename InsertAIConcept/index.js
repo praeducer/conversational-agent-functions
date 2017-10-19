@@ -5,7 +5,6 @@ const url = require("url");
 const path = require("path");
 var config = require(path.resolve(__dirname, "config"));
 
-var context;
 var client = new documentClient(config.endpoint, {
     masterKey: config.primaryKey
 });
@@ -27,6 +26,13 @@ module.exports = function(context, req) {
         req.body.title &&
         req.body.extract
     ) {
+        context.log(
+            "[QueryCollection] pageid " +
+                req.body.source.pageid +
+                " index " +
+                config.collection.id
+        );
+
         QueryCollection(req.body.source.pageid)
             .then(function(results) {
                 // If there is not an entry already
@@ -44,7 +50,8 @@ module.exports = function(context, req) {
             .then(context.done)
             .catch(function(err) {
                 context.log(
-                    "[InsertAIConcept] insertion failed " + req.body.source.pageid
+                    "[InsertAIConcept] insertion failed " +
+                        req.body.source.pageid
                 );
                 context.log.error(err);
             });
@@ -56,10 +63,6 @@ module.exports = function(context, req) {
 
 // https://docs.microsoft.com/en-us/azure/documentdb/documentdb-nodejs-get-started
 function QueryCollection(pageid) {
-    context.log(
-        "[QueryCollection] pageid " + pageid + " index " + config.collection.id
-    );
-
     return new Promise(function(resolve, reject) {
         client
             .queryDocuments(collectionUrl, {
