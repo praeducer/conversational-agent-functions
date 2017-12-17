@@ -36,7 +36,7 @@ module.exports = function(context, req) {
         QueryCollection(req.body.source.pageid)
             .then(function(results) {
                 // If there is not an entry already
-                if (results && results.length == 0) {
+                if (results instanceof Object && results.length === 0) {
                     context.log.info(
                         "[InsertAIConcept] inserting " + req.body.source.pageid
                     );
@@ -56,7 +56,7 @@ module.exports = function(context, req) {
                 context.log.error(err);
             });
     } else {
-        context.log("[InsertAIConcept] missing body");
+        context.log("[InsertAIConcept] data missing");
         context.done();
     }
 };
