@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 var packageJSON = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'));
 var userAgent = packageJSON.name + "/" + packageJSON.version + " (+http://neona.chat)"
+var userAgent = `$(packageJSON.name)/$(packageJSON.version) (+$(package.JSON.bot))`
 
 const url = require('url');
 
@@ -18,13 +19,11 @@ function API (query) {
         json: true
     };
 }
+
 // Takes in the string of the category title e.g. "Category:Computer_vision"
-// TODO: Handle case where there are more than 500 pages. Use API's continue param
-// TODO: Turn into it's own azure function. Return a list of documents that then can be iterated over and inserted into document DB
-// TODO: Use wikipedia API's' continue functionality instead of custom batching system
 
 // https://www.mediawiki.org/wiki/API:Categorymembers
-API.CategoryMembers = function(category, limit=500) {
+API.CategoryMembers = function(category, limit=200, _continue) {
     return API({
         action: "query",
         format: "json",
@@ -32,21 +31,23 @@ API.CategoryMembers = function(category, limit=500) {
         cmlimit: limit.toString(10),
         cmtype: "page",
         cmprop: "ids",
-        cmtitle: "Category:" + category.toLowerCase().replace(" ", "_")
+        cmtitle: "category:" + category.toLowerCase().replace(" ", "_"),
+        cmcontinue: _continue
     })
 }
-API.Subcategories = function(category) {
+API.Subcategories = function(category, _continue) {
     return API({
         action: "query",
         format: "json",
         list: "categorymembers",
         cmtype: "subcat",
-        cmtitle: category
+        cmtitle: "category:" + category.toLowerCase().replace(" ", "_"),
+        cmcontinue: _continue
     })
 }
 // Pages
 // https://www.mediawiki.org/wiki/Extension:TextExtracts
-API.Pages = function(pageids=[], limit=20) {
+API.Pages = function(pageids=[], limit=20, _continue) {
     return API({
         action: "query",
         format: "json",
@@ -56,7 +57,8 @@ API.Pages = function(pageids=[], limit=20) {
         exintro: true,
         explaintext: true,
         indexpageids: true,
-        pageids: pageids.join("|")
+        pageids: pageids.join("|"),
+        excontinue: _continue
     })
 }
 
