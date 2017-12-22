@@ -1,28 +1,13 @@
-// For testing
-var test = false;
-// TODO: setup to run local: context = console, var res, var req, hide all dones, call instead of exporting the main function
-var local = false;
-
 // https://github.com/request/request-promise
-const request = require("request-promise");
-const fs = require("fs");
-const path = require("path");
-
-var appRoot = process.cwd();
+var fs = require("fs");
+var path = require("path");
 var packageJSON = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, "package.json"), "utf8")
 );
-
+var request = require("request-promise");
 var wikipedia = require("./wikipedia");
-// TODO: Store in an environment variable e.g. process.env[code];
-var insertAIConceptUri = "<YOUR AIConcept ENDPOINT HERE>";
+var insertAIConceptUri = process.env["AIConceptURI"];
 
-// TODO: Make this recursive for subcategories. Can call itself. Have it take in another param for depth, stop after depth is 0.
-// TODO: Make sure this does not stop all requests after a single request fails
-// TODO: Config this so it can run locally or on azure
-// TODO: Turn into its own azure function but take a batch of wikiPageObjects. Call it and leave it.
-// TODO: Insert category as well, especially after refactoring so this script is recursive to subcategories
-// Category must be valid for a url. All spaces replaced with '_', underscore.
 // Promises: https://developers.google.com/web/fundamentals/getting-started/primers/promises
 module.exports = function(context, req) {
   context.log.info(
@@ -253,6 +238,7 @@ function requestContinued(
   var cycles = 0;
   function continueRequest(continueParam) {
     return new Promise(function(resolve) {
+      // TODO: This doesn't work for promises in parallel, only for a single continue thread.
       setTimeout(resolve, throttle > 0 ? 1000 / throttle : 0);
     })
       .then(function() {
