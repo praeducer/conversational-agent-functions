@@ -25,6 +25,7 @@
     "conversational"
   ],
   "bot": "http://neona.chat",
+  "botContact": "hello@neona.chat",
   "author": "Paul Prae",
   "contributors": ["Austin New"],
   "license": "MIT"
