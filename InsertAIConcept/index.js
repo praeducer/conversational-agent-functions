@@ -1,16 +1,9 @@
-"use strict";
-
+var config = require("./config");
 const documentClient = require("documentdb").DocumentClient;
-const url = require("url");
-const path = require("path");
-var config = require(path.resolve(__dirname, "config"));
-
-var client = new documentClient(config.endpoint, {
-    masterKey: config.primaryKey
+var client = new documentClient(config.uri, {
+    masterKey: config.key
 });
-var HttpStatusCodes = { NOTFOUND: 404 };
-var databaseUrl = "dbs/" + config.database.id;
-var collectionUrl = databaseUrl + "/colls/" + config.collection.id;
+var collectionEndpoint = `dbs/${ config.database }/colls/${ config.collection}`
 
 // TODO: Handle batches of documents
 // TODO: Only updated if a revision was made since the last time the script was ran: https://www.mediawiki.org/wiki/API:Revisions
