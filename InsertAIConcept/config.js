@@ -9,8 +9,8 @@ let documentDBBinding = functionJSON.bindings.filter(function(obj) {return obj.t
 // Convert the format A=ValueA;B=ValueB;... into an object.
 let localDBConnection = "AccountEndpoint=http://localhost:443/;AccountKey=;";
 let documentDBConnection = (process.env[documentDBBinding.connection] || localDBConnection).split(";").reduce(function(obj,pair) {
-  let [key, value] = pair.split("=", 2);
-  obj[key] = value;
+  let split = pair.indexOf("=");
+  obj[pair.substr(0, split)] = pair.substr(split + 1);
   return obj;
 }, {});
 
